@@ -28,20 +28,42 @@ export default function AddLead() {
 
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
-  const handleSubmit = () => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
     if (!form.patient_name || !form.mobile) {
       toast({ title: 'Error', description: 'Patient name and mobile are required', variant: 'destructive' });
       return;
     }
-    addLead({
+
+    const leadData = {
       ...form,
-      lead_id: 0,
       age: parseInt(form.age) || 0,
       date_created: new Date().toISOString().split('T')[0],
       last_contact_date: new Date().toISOString().split('T')[0],
-    } as any);
-    toast({ title: 'Success', description: 'Lead added successfully!' });
-    navigate('/leads');
+    };
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leadData),
+      });
+
+      if (!res.ok) throw new Error('Webhook failed');
+
+      addLead({ ...leadData, lead_id: 0 } as any);
+      toast({ title: 'Success', description: 'Lead added successfully!' });
+      navigate('/leads');
+    } catch (err) {
+      console.error('[CRM] Webhook error:', err);
+      toast({ title: 'Warning', description: 'Lead saved locally but webhook failed.', variant: 'destructive' });
+      addLead({ ...leadData, lead_id: 0 } as any);
+      navigate('/leads');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -164,8 +186,8 @@ export default function AddLead() {
               Next <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} className="gap-2 bg-success hover:bg-success/90">
-              <Save className="h-4 w-4" /> Save Lead
+            <Button onClick={handleSubmit} disabled={submitting} className="gap-2 bg-success hover:bg-success/90">
+              <Save className="h-4 w-4" /> {submitting ? 'Saving...' : 'Save Lead'}
             </Button>
           )}
         </div>
