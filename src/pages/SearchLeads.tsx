@@ -36,6 +36,7 @@ export default function SearchLeads() {
         l.patient_name.toLowerCase().includes(q) ||
         l.mobile.includes(q) ||
         l.city.toLowerCase().includes(q) ||
+        l.department.toLowerCase().includes(q) ||
         l.problem_description.toLowerCase().includes(q)
       );
     }

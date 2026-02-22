@@ -23,33 +23,54 @@ function parseCSVRow(row: string): string[] {
 
 function parseDate(dateStr: string): string {
   if (!dateStr) return '';
-  // Try various formats
-  const formats = [
-    /^(\d{2})\/(\d{2})\/(\d{4})$/, // DD/MM/YYYY
-    /^(\d{2})-(\d{2})-(\d{4})$/, // DD-MM-YYYY
-    /^(\d{4})-(\d{2})-(\d{2})$/, // YYYY-MM-DD
-  ];
-  for (const fmt of formats) {
-    const m = dateStr.match(fmt);
-    if (m) {
-      if (fmt === formats[2]) return dateStr;
-      return `${m[3]}-${m[2]}-${m[1]}`;
-    }
-  }
-  return dateStr;
+  const trimmed = dateStr.trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  // DD-MM-YYYY or DD/MM/YYYY
+  const m = trimmed.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return trimmed;
 }
 
-const validStatuses: CallStatus[] = ['New Lead', 'Contacted', 'Appointment Booked', 'Followup', 'Not Interested', 'Converted', 'Lost'];
-const validDepts: Department[] = ['Orthopedics', 'Neurology', 'Both'];
+/** Normalize department: "ortho" → "Orthopedics", "neuro" → "Neurology" */
+function normalizeDepartment(raw: string): Department {
+  const val = raw.toLowerCase().trim();
+  if (val.startsWith('ortho')) return 'Orthopedics';
+  if (val.startsWith('neuro')) return 'Neurology';
+  if (val === 'both') return 'Both';
+  return 'Orthopedics'; // fallback
+}
+
+/** Normalize call status: handle common variations */
+function normalizeCallStatus(raw: string): CallStatus {
+  const val = raw.toLowerCase().trim();
+  const map: Record<string, CallStatus> = {
+    'new lead': 'New Lead',
+    'new': 'New Lead',
+    'contacted': 'Contacted',
+    'pick phone': 'Contacted',
+    'picked phone': 'Contacted',
+    'appointment booked': 'Appointment Booked',
+    'booked': 'Appointment Booked',
+    'followup': 'Followup',
+    'follow up': 'Followup',
+    'follow-up': 'Followup',
+    'not interested': 'Not Interested',
+    'converted': 'Converted',
+    'lost': 'Lost',
+  };
+  return map[val] || 'New Lead';
+}
 
 function mapCSVToLead(headers: string[], values: string[], index: number): Lead {
   const get = (name: string) => {
-    const idx = headers.findIndex(h => h.toLowerCase().replace(/[_\s]/g, '') === name.toLowerCase().replace(/[_\s]/g, ''));
-    return idx >= 0 ? values[idx] || '' : '';
+    const normalized = name.toLowerCase().replace(/[_\s]/g, '');
+    const idx = headers.findIndex(h => h.toLowerCase().replace(/[_\s]/g, '') === normalized);
+    return idx >= 0 ? (values[idx] || '').trim() : '';
   };
 
-  const callStatus = get('callstatus') || get('call_status') || 'New Lead';
-  const dept = get('department') || 'Orthopedics';
+  const rawDept = get('department') || get('dept');
+  const rawStatus = get('callstatus') || get('call_status') || get('status');
 
   return {
     lead_id: parseInt(get('leadid') || get('lead_id') || get('sno') || get('sr') || String(index + 1)),
@@ -64,11 +85,11 @@ function mapCSVToLead(headers: string[], values: string[], index: number): Lead 
     state: get('state') || '',
     pincode: get('pincode') || '',
     address: get('address') || '',
-    department: (validDepts.includes(dept as Department) ? dept : 'Orthopedics') as Department,
+    department: normalizeDepartment(rawDept),
     sub_specialty: get('subspecialty') || get('sub_specialty') || '',
     problem_description: get('problemdescription') || get('problem_description') || get('problem') || '',
     severity: (get('severity') as any) || 'Medium',
-    call_status: (validStatuses.includes(callStatus as CallStatus) ? callStatus : 'New Lead') as CallStatus,
+    call_status: normalizeCallStatus(rawStatus),
     followup_date: parseDate(get('followupdate') || get('followup_date')),
     appointment_date: parseDate(get('appointmentdate') || get('appointment_date')),
     appointment_time: get('appointmenttime') || get('appointment_time') || '',
@@ -78,6 +99,30 @@ function mapCSVToLead(headers: string[], values: string[], index: number): Lead 
     remarks: get('remarks') || get('remark') || '',
     priority: (get('priority') as any) || 'Normal',
     last_contact_date: parseDate(get('lastcontactdate') || get('last_contact_date')),
+  };
+}
+
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function computeStats(leads: Lead[]): DashboardStats {
+  const today = getToday();
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().split('T')[0];
+
+  return {
+    totalLeads: leads.length,
+    todayAppointments: leads.filter(l => l.appointment_date === today).length,
+    followupsToday: leads.filter(l => l.followup_date === today).length,
+    notInterested: leads.filter(l => l.call_status === 'Not Interested').length,
+    newLeadsThisWeek: leads.filter(l => l.date_created >= weekAgoStr).length,
+    conversionRate: leads.length > 0
+      ? Math.round((leads.filter(l => l.call_status === 'Appointment Booked' || l.call_status === 'Converted').length / leads.length) * 100)
+      : 0,
+    pendingFollowups: leads.filter(l => l.followup_date >= today && l.call_status !== 'Converted' && l.call_status !== 'Lost').length,
+    activeDoctors: new Set(leads.filter(l => l.doctor_assigned).map(l => l.doctor_assigned)).size,
   };
 }
 
@@ -96,11 +141,19 @@ export function useLeadsData() {
       if (lines.length < 2) throw new Error('No data');
       const headers = parseCSVRow(lines[0]);
       const parsed = lines.slice(1).map((line, i) => mapCSVToLead(headers, parseCSVRow(line), i));
+
+      // Debug logging
+      console.log('[CRM] Raw headers:', headers);
+      console.log('[CRM] Parsed leads:', parsed.length);
+      console.log('[CRM] Departments:', parsed.map(l => l.department));
+      console.log('[CRM] Today:', getToday());
+      console.log('[CRM] Appointments today:', parsed.filter(l => l.appointment_date === getToday()).length);
+      console.log('[CRM] Followups today:', parsed.filter(l => l.followup_date === getToday()).length);
+
       setLeads(parsed);
       localStorage.setItem('crm_leads_cache', JSON.stringify(parsed));
       setError(null);
     } catch (e) {
-      // Fallback to cache
       const cached = localStorage.getItem('crm_leads_cache');
       if (cached) {
         setLeads(JSON.parse(cached));
@@ -131,22 +184,8 @@ export function useLeadsData() {
     localStorage.setItem('crm_leads_cache', JSON.stringify(updated));
   };
 
-  const today = new Date().toISOString().split('T')[0];
-
-  const stats: DashboardStats = {
-    totalLeads: leads.length,
-    todayAppointments: leads.filter(l => l.appointment_date === today && l.call_status === 'Appointment Booked').length,
-    followupsToday: leads.filter(l => l.followup_date === today && l.call_status === 'Followup').length,
-    notInterested: leads.filter(l => l.call_status === 'Not Interested').length,
-    newLeadsThisWeek: leads.filter(l => {
-      const d = new Date(l.date_created);
-      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-      return d >= weekAgo;
-    }).length,
-    conversionRate: leads.length > 0 ? Math.round((leads.filter(l => l.call_status === 'Converted').length / leads.length) * 100) : 0,
-    pendingFollowups: leads.filter(l => l.call_status === 'Followup').length,
-    activeDoctors: new Set(leads.filter(l => l.doctor_assigned).map(l => l.doctor_assigned)).size,
-  };
+  // Compute stats dynamically from current leads
+  const stats = computeStats(leads);
 
   return { leads, loading, lastUpdated, error, stats, fetchData, addLead, updateLead };
 }
