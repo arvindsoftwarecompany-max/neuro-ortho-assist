@@ -89,8 +89,9 @@ export default function Dashboard() {
   });
 
   const recentLeads = filteredLeads.slice(0, 5);
+  const todayFollowups = filteredLeads.filter(l => l.followup_date === today).slice(0, 5);
   const todayAppointments = filteredLeads.filter(l => l.appointment_date === today).slice(0, 5);
-  const overdueFollowups = filteredLeads.filter(l => l.followup_date && l.followup_date < today).slice(0, 5);
+  const overdueFollowups = filteredLeads.filter(l => l.followup_date && l.followup_date < today && l.call_status !== 'Converted' && l.call_status !== 'Lost').slice(0, 5);
 
   const deptTabs: DeptTab[] = ['All', 'Orthopedics', 'Neurology'];
 
@@ -140,10 +141,10 @@ export default function Dashboard() {
           <StatCard title="Total Leads" value={filteredStats.totalLeads} icon={Users} variant="blue" onClick={() => navigate('/leads')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <StatCard title="Today's Appointments" value={filteredStats.todayAppointments} icon={CalendarCheck} variant="green" onClick={() => navigate('/leads?status=Appointment Booked')} />
+          <StatCard title="Today's Appointments" value={filteredStats.todayAppointments} icon={CalendarCheck} variant="green" onClick={() => navigate('/leads?filter=today_appointments')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <StatCard title="Followups Today" value={filteredStats.followupsToday} icon={Clock} variant="amber" onClick={() => navigate('/leads?status=Followup')} />
+          <StatCard title="Followups Today" value={filteredStats.followupsToday} icon={Clock} variant="amber" onClick={() => navigate('/leads?filter=today_followups')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <StatCard title="Not Interested" value={filteredStats.notInterested} icon={XCircle} variant="red" onClick={() => navigate('/leads?status=Not Interested')} />
@@ -154,7 +155,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard title="New This Week" value={filteredStats.newLeadsThisWeek} icon={TrendingUp} variant="purple" onClick={() => navigate('/leads')} />
         <StatCard title="Conversion Rate" value={filteredStats.conversionRate} icon={Target} variant="teal" suffix="%" />
-        <StatCard title="Pending Followups" value={filteredStats.pendingFollowups} icon={Bell} variant="amber" onClick={() => navigate('/leads?status=Followup')} />
+        <StatCard title="Pending Followups" value={filteredStats.pendingFollowups} icon={Bell} variant="amber" onClick={() => navigate('/leads?filter=pending_followups')} />
         <StatCard title="Active Doctors" value={filteredStats.activeDoctors} icon={UserCheck} variant="blue" />
       </div>
 
@@ -228,8 +229,114 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </div>
 
-      {/* Recent Leads + Appointments */}
+      {/* Today's Appointments + Followups Today */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Today's Appointments */}
+        <div className="glass-card p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-success" /> Today's Appointments
+              <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded-full">{todayAppointments.length}</span>
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/leads?filter=today_appointments')} className="text-xs text-primary">View All</Button>
+          </div>
+          <div className="space-y-3">
+            {todayAppointments.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarCheck className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No appointments scheduled for today.</p>
+              </div>
+            ) : todayAppointments.map(lead => (
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20 cursor-pointer hover:bg-success/10 transition-colors"
+                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center text-xs font-bold text-success">
+                    {lead.patient_name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
+                    <p className="text-xs text-muted-foreground">{lead.appointment_time || 'TBD'} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <StatusBadge status={lead.call_status} />
+                  <p className="text-xs text-muted-foreground mt-1">{lead.department}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Followups Today */}
+        <div className="glass-card p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-warning" /> Followups Today
+              <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full">{todayFollowups.length}</span>
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/leads?filter=today_followups')} className="text-xs text-primary">View All</Button>
+          </div>
+          <div className="space-y-3">
+            {todayFollowups.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
+              </div>
+            ) : todayFollowups.map(lead => (
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/20 cursor-pointer hover:bg-warning/10 transition-colors"
+                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center text-xs font-bold text-warning">
+                    {lead.patient_name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
+                    <p className="text-xs text-muted-foreground">{lead.department} • {lead.mobile}</p>
+                  </div>
+                </div>
+                <StatusBadge status={lead.call_status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Overdue Followups + Recent Leads */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Overdue Followups */}
+        <div className="glass-card p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Bell className="h-4 w-4 text-destructive" /> Overdue Followups
+              <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded-full">{overdueFollowups.length}</span>
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/leads?filter=overdue_followups')} className="text-xs text-primary">View All</Button>
+          </div>
+          <div className="space-y-3">
+            {overdueFollowups.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No overdue follow-ups. You're all caught up!</p>
+              </div>
+            ) : overdueFollowups.map(lead => (
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors"
+                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center text-xs font-bold text-destructive">
+                    {lead.patient_name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
+                    <p className="text-xs text-destructive">Due: {lead.followup_date} ⚠</p>
+                  </div>
+                </div>
+                <StatusBadge status={lead.call_status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Leads */}
         <div className="glass-card p-5">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-foreground">Recent Leads</h3>
@@ -251,26 +358,6 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <StatusBadge status={lead.call_status} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="glass-card p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-semibold text-foreground">Today's Appointments</h3>
-          </div>
-          <div className="space-y-3">
-            {todayAppointments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No appointments scheduled for today</p>
-            ) : todayAppointments.map(lead => (
-              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20 cursor-pointer"
-                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
-                  <p className="text-xs text-muted-foreground">{lead.appointment_time || 'TBD'} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
-                </div>
-                <span className="text-xs text-success font-medium">{lead.department}</span>
               </div>
             ))}
           </div>
