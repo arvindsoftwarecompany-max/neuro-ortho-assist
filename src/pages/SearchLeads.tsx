@@ -28,8 +28,24 @@ export default function SearchLeads() {
   const [perPage, setPerPage] = useState(15);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Special date-based filter from query params
+  const specialFilter = searchParams.get('filter');
+
   const filtered = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
     let result = [...leads];
+
+    // Apply special date-based filters first
+    if (specialFilter === 'today_appointments') {
+      result = result.filter(l => l.appointment_date === today);
+    } else if (specialFilter === 'today_followups') {
+      result = result.filter(l => l.followup_date === today);
+    } else if (specialFilter === 'pending_followups') {
+      result = result.filter(l => l.followup_date === today && l.call_status !== 'Converted' && l.call_status !== 'Lost');
+    } else if (specialFilter === 'overdue_followups') {
+      result = result.filter(l => l.followup_date && l.followup_date < today && l.call_status !== 'Converted' && l.call_status !== 'Lost');
+    }
+
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(l =>
@@ -52,7 +68,7 @@ export default function SearchLeads() {
       return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
     });
     return result;
-  }, [leads, search, statusFilter, deptFilter, severityFilter, priorityFilter, sortField, sortDir]);
+  }, [leads, search, statusFilter, deptFilter, severityFilter, priorityFilter, sortField, sortDir, specialFilter]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
@@ -79,6 +95,22 @@ export default function SearchLeads() {
 
   return (
     <div className="space-y-5 pt-12 lg:pt-0">
+      {/* Active filter banner */}
+      {specialFilter && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-3 flex items-center justify-between border border-primary/30">
+          <span className="text-sm text-primary font-medium">
+            {specialFilter === 'today_appointments' && '📅 Showing Today\'s Appointments'}
+            {specialFilter === 'today_followups' && '🔔 Showing Today\'s Follow-ups'}
+            {specialFilter === 'pending_followups' && '⏳ Showing Pending Follow-ups'}
+            {specialFilter === 'overdue_followups' && '⚠️ Showing Overdue Follow-ups'}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/leads')} className="text-xs gap-1">
+            <X className="h-3 w-3" /> Back to All Leads
+          </Button>
+        </motion.div>
+      )}
+
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Search Leads</h1>
