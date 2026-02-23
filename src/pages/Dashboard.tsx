@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, CalendarCheck, Clock, XCircle, TrendingUp, Target, Bell, UserCheck,
-  Plus, RefreshCw, Bone, Brain, Pencil, CreditCard, Landmark, Banknote, Shield
+  Plus, RefreshCw, Bone, Brain, Pencil, CreditCard, Landmark, Banknote, Shield, Download, CalendarIcon
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import StatCard from '@/components/StatCard';
@@ -24,6 +27,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<DeptTab>('All');
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [activePayment, setActivePayment] = useState<string | null>(null);
+  const [paymentDateFrom, setPaymentDateFrom] = useState<Date | undefined>(undefined);
+  const [paymentDateTo, setPaymentDateTo] = useState<Date | undefined>(undefined);
 
   // Filter leads by selected department tab
   const filteredLeads = useMemo(() => {
@@ -170,7 +175,30 @@ export default function Dashboard() {
           { name: 'Cash', icon: Banknote, color: 'bg-success/15 text-success', border: 'border-success/20', bg: 'bg-success/5' },
           { name: 'Private', icon: CreditCard, color: 'bg-warning/15 text-warning', border: 'border-warning/20', bg: 'bg-warning/5' },
         ];
-        const paymentLeads = activePayment ? filteredLeads.filter(l => l.blood_group === activePayment).slice(0, 10) : [];
+        const paymentLeads = activePayment ? filteredLeads.filter(l => {
+          if (l.blood_group !== activePayment) return false;
+          if (paymentDateFrom) {
+            const d = l.date_created || l.appointment_date || '';
+            if (d < format(paymentDateFrom, 'yyyy-MM-dd')) return false;
+          }
+          if (paymentDateTo) {
+            const d = l.date_created || l.appointment_date || '';
+            if (d > format(paymentDateTo, 'yyyy-MM-dd')) return false;
+          }
+          return true;
+        }) : [];
+
+        const exportPaymentCSV = () => {
+          if (!paymentLeads.length) return;
+          const headers = ['Lead ID', 'Patient Name', 'Mobile', 'Department', 'Doctor', 'Status', 'Appointment Date', 'Date Created'];
+          const rows = paymentLeads.map(l => [l.lead_id, l.patient_name, l.mobile, l.department, l.doctor_assigned, l.call_status, l.appointment_date, l.date_created]);
+          const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = `${activePayment}_patients.csv`; a.click();
+          URL.revokeObjectURL(url);
+        };
+
         return (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -183,7 +211,7 @@ export default function Dashboard() {
                       "glass-card-hover p-4 md:p-5 cursor-pointer transition-all",
                       isActive && `ring-2 ring-primary/50 ${pt.bg}`
                     )}
-                    onClick={() => setActivePayment(isActive ? null : pt.name)}
+                    onClick={() => { setActivePayment(isActive ? null : pt.name); setPaymentDateFrom(undefined); setPaymentDateTo(undefined); }}
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -201,16 +229,53 @@ export default function Dashboard() {
 
             {activePayment && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-primary" /> {activePayment} Patients
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                      {filteredLeads.filter(l => l.blood_group === activePayment).length}
-                    </span>
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={() => setActivePayment(null)} className="text-xs text-primary">Close</Button>
+                <div className="flex flex-col gap-3 mb-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-primary" /> {activePayment} Patients
+                      <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                        {paymentLeads.length}
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={exportPaymentCSV} className="h-7 px-2 text-xs gap-1">
+                        <Download className="h-3 w-3" /> Download
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setActivePayment(null)} className="text-xs text-primary">Close</Button>
+                    </div>
+                  </div>
+                  {/* Date Filters */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("h-7 text-xs gap-1", paymentDateFrom && "border-primary/50")}>
+                          <CalendarIcon className="h-3 w-3" />
+                          {paymentDateFrom ? format(paymentDateFrom, 'dd MMM yyyy') : 'From Date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={paymentDateFrom} onSelect={setPaymentDateFrom} initialFocus className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("h-7 text-xs gap-1", paymentDateTo && "border-primary/50")}>
+                          <CalendarIcon className="h-3 w-3" />
+                          {paymentDateTo ? format(paymentDateTo, 'dd MMM yyyy') : 'To Date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={paymentDateTo} onSelect={setPaymentDateTo} initialFocus className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    {(paymentDateFrom || paymentDateTo) && (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setPaymentDateFrom(undefined); setPaymentDateTo(undefined); }}>
+                        Clear Dates
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {paymentLeads.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No {activePayment} patients found.</p>
                   ) : paymentLeads.map(lead => (
