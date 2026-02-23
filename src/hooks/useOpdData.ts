@@ -94,5 +94,11 @@ export function useOpdData() {
     localStorage.setItem('opd_reminders_cache', JSON.stringify(updated));
   };
 
-  return { reminders, loading, lastUpdated, error, fetchData, addReminder };
+  const updateReminder = (id: number, data: Partial<OpdReminder>) => {
+    const updated = reminders.map(r => r.id === id ? { ...r, ...data } : r);
+    setReminders(updated);
+    localStorage.setItem('opd_reminders_cache', JSON.stringify(updated));
+  };
+
+  return { reminders, loading, lastUpdated, error, fetchData, addReminder, updateReminder };
 }
