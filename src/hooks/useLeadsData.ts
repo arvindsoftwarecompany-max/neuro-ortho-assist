@@ -80,7 +80,7 @@ function mapCSVToLead(headers: string[], values: string[], index: number): Lead 
     email: get('email') || '',
     age: parseInt(get('age')) || 0,
     gender: (get('gender') as any) || 'Other',
-    blood_group: get('bloodgroup') || get('blood_group') || '',
+    blood_group: get('paymentmode') || get('payment_mode') || get('paymenttype') || get('payment_type') || get('bloodgroup') || get('blood_group') || '',
     city: get('city') || '',
     state: get('state') || '',
     pincode: get('pincode') || '',
