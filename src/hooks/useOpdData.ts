@@ -37,6 +37,16 @@ function mapCSVToOpd(headers: string[], values: string[], index: number): OpdRem
     return idx >= 0 ? (values[idx] || '').trim() : '';
   };
 
+  const rawPayment = get('paymentmode') || get('payment_mode') || get('paymenttype') || get('payment_type') || get('bloodgroup') || get('blood_group') || '';
+  const normalizePayment = (v: string): string => {
+    const lower = v.toLowerCase().trim();
+    if (lower.includes('rghs')) return 'RGHS';
+    if (lower.includes('echs')) return 'ECHS';
+    if (lower.includes('cash')) return 'Cash';
+    if (lower.includes('private')) return 'Private';
+    return v.trim() || '';
+  };
+
   return {
     id: index + 1,
     name: get('name') || get('patientname') || get('patient_name') || 'Unknown',
@@ -46,6 +56,7 @@ function mapCSVToOpd(headers: string[], values: string[], index: number): OpdRem
     next_visit: parseDate(get('nextvisit') || get('next_visit') || ''),
     reminder_1_day: get('reminder1day') || get('reminder_1_day') || get('reminder') || '',
     time: get('time') || '',
+    payment_type: normalizePayment(rawPayment),
   };
 }
 
