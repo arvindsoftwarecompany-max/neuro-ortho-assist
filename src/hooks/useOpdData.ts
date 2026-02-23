@@ -37,7 +37,7 @@ function mapCSVToOpd(headers: string[], values: string[], index: number): OpdRem
     return idx >= 0 ? (values[idx] || '').trim() : '';
   };
 
-  const rawPayment = get('paymentmode') || get('payment_mode') || get('paymenttype') || get('payment_type') || get('bloodgroup') || get('blood_group') || '';
+  const rawPayment = get('facility') || get('paymentmode') || get('payment_mode') || get('paymenttype') || get('payment_type') || '';
   const normalizePayment = (v: string): string => {
     const lower = v.toLowerCase().trim();
     if (lower.includes('rghs')) return 'RGHS';
