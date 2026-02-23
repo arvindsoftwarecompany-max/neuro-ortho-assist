@@ -256,7 +256,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
-                    <p className="text-xs text-muted-foreground">{lead.appointment_time || 'TBD'} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
+                    <p className="text-xs text-muted-foreground">{lead.mobile} • {lead.appointment_time || 'TBD'} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
