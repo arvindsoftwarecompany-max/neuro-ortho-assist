@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,16 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
   const [followupDate, setFollowupDate] = useState('');
+
+  // Auto-fill form when lead changes
+  useEffect(() => {
+    if (lead && open) {
+      setMobile(lead.mobile || '');
+      setAppointmentDate(lead.appointment_date || '');
+      setAppointmentTime(lead.appointment_time || '');
+      setFollowupDate(lead.followup_date || '');
+    }
+  }, [lead, open]);
 
   // Sync form when lead changes
   const resetForm = () => {
