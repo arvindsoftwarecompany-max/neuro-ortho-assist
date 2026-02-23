@@ -106,10 +106,10 @@ export default function AddLead() {
                   <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div><Label>Blood Group</Label>
+              <div><Label>Payment Type</Label>
                 <Select value={form.blood_group} onValueChange={v => set('blood_group', v)}>
                   <SelectTrigger className="mt-1 bg-muted/50"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                  <SelectContent>{['RGHS','ECHS','Cash','Private'].map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
