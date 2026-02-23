@@ -33,6 +33,8 @@ export default function OpdReminder() {
     // Active filter from stat card click
     if (activeFilter === 'todayFollowup') {
       data = data.filter(r => r.reminder_1_day === today);
+    } else if (activeFilter === 'todayVisits') {
+      data = data.filter(r => r.next_visit === today);
     }
     if (search) {
       const q = search.toLowerCase();
@@ -115,7 +117,8 @@ export default function OpdReminder() {
           <StatCard title="Total Patients" value={stats.total} icon={Clock} variant="blue" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <StatCard title="Today's Visits" value={stats.todayVisits} icon={CalendarIcon} variant="green" />
+          <StatCard title="Today's Visits" value={stats.todayVisits} icon={CalendarIcon} variant={activeFilter === 'todayVisits' ? 'green' : 'green'}
+            onClick={() => setActiveFilter(activeFilter === 'todayVisits' ? null : 'todayVisits')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <StatCard title="Today Followup" value={stats.todayFollowup} icon={Bell} variant={activeFilter === 'todayFollowup' ? 'green' : 'amber'}
