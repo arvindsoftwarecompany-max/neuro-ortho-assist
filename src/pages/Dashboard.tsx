@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, CalendarCheck, Clock, XCircle, TrendingUp, Target, Bell, UserCheck,
-  Plus, RefreshCw, Bone, Brain, Pencil
+  Plus, RefreshCw, Bone, Brain, Pencil, CreditCard, Landmark, Banknote, Shield
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useLeadsData } from '@/hooks/useLeadsData';
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DeptTab>('All');
   const [editLead, setEditLead] = useState<Lead | null>(null);
+  const [activePayment, setActivePayment] = useState<string | null>(null);
 
   // Filter leads by selected department tab
   const filteredLeads = useMemo(() => {
@@ -149,17 +150,94 @@ export default function Dashboard() {
           <StatCard title="Followups Today" value={filteredStats.followupsToday} icon={Clock} variant="amber" onClick={() => navigate('/leads?filter=today_followups')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <StatCard title="Not Interested" value={filteredStats.notInterested} icon={XCircle} variant="red" onClick={() => navigate('/leads?status=Not Interested')} />
+          <StatCard title="Conversion Rate" value={filteredStats.conversionRate} icon={Target} variant="teal" suffix="%" />
         </motion.div>
       </div>
 
       {/* Stats Row 2 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard title="New This Week" value={filteredStats.newLeadsThisWeek} icon={TrendingUp} variant="purple" onClick={() => navigate('/leads')} />
-        <StatCard title="Conversion Rate" value={filteredStats.conversionRate} icon={Target} variant="teal" suffix="%" />
         <StatCard title="Pending Followups" value={filteredStats.pendingFollowups} icon={Bell} variant="amber" onClick={() => navigate('/leads?filter=pending_followups')} />
         <StatCard title="Active Doctors" value={filteredStats.activeDoctors} icon={UserCheck} variant="blue" />
+        <StatCard title="Not Interested" value={filteredStats.notInterested} icon={XCircle} variant="red" onClick={() => navigate('/leads?status=Not Interested')} />
       </div>
+
+      {/* Payment Type Breakdown */}
+      {(() => {
+        const paymentTypes = [
+          { name: 'RGHS', icon: Shield, color: 'bg-primary/15 text-primary', border: 'border-primary/20', bg: 'bg-primary/5' },
+          { name: 'ECHS', icon: Landmark, color: 'bg-secondary/15 text-secondary', border: 'border-secondary/20', bg: 'bg-secondary/5' },
+          { name: 'Cash', icon: Banknote, color: 'bg-success/15 text-success', border: 'border-success/20', bg: 'bg-success/5' },
+          { name: 'Private', icon: CreditCard, color: 'bg-warning/15 text-warning', border: 'border-warning/20', bg: 'bg-warning/5' },
+        ];
+        const paymentLeads = activePayment ? filteredLeads.filter(l => l.blood_group === activePayment).slice(0, 10) : [];
+        return (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {paymentTypes.map(pt => {
+                const count = filteredLeads.filter(l => l.blood_group === pt.name).length;
+                const isActive = activePayment === pt.name;
+                return (
+                  <motion.div key={pt.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      "glass-card-hover p-4 md:p-5 cursor-pointer transition-all",
+                      isActive && `ring-2 ring-primary/50 ${pt.bg}`
+                    )}
+                    onClick={() => setActivePayment(isActive ? null : pt.name)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">{pt.name}</p>
+                        <p className="text-2xl md:text-3xl font-bold text-foreground">{count}</p>
+                      </div>
+                      <div className={cn('p-2.5 rounded-lg', pt.color)}>
+                        <pt.icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {activePayment && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-primary" /> {activePayment} Patients
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                      {filteredLeads.filter(l => l.blood_group === activePayment).length}
+                    </span>
+                  </h3>
+                  <Button variant="ghost" size="sm" onClick={() => setActivePayment(null)} className="text-xs text-primary">Close</Button>
+                </div>
+                <div className="space-y-3">
+                  {paymentLeads.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No {activePayment} patients found.</p>
+                  ) : paymentLeads.map(lead => (
+                    <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/patient/${lead.lead_id}`)}>
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                          {lead.patient_name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{lead.patient_name}</p>
+                          <p className="text-xs text-muted-foreground">{lead.department} • {lead.mobile} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={lead.call_status} />
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
+                          <Pencil className="h-3 w-3" /> Update
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Department Breakdown (always from all leads) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
