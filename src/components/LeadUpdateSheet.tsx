@@ -67,7 +67,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
 
     // Send to n8n webhook
     try {
-      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook-test/updatedr', {
+      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/updatedr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
