@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, UserPlus, BarChart3, Calendar, Settings, 
-  Menu, X, Activity, Brain, Bone
+  Menu, X, Activity, Brain, Bone, Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/opd-reminder', label: 'OPD Reminder', icon: Bell },
   { path: '/leads', label: 'Search Leads', icon: Search },
   { path: '/add-lead', label: 'Add Lead', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },

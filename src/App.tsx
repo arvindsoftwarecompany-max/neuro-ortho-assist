@@ -11,6 +11,7 @@ import PatientReport from "@/pages/PatientReport";
 import Analytics from "@/pages/Analytics";
 import CalendarView from "@/pages/CalendarView";
 import SettingsPage from "@/pages/SettingsPage";
+import OpdReminder from "@/pages/OpdReminder";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/opd-reminder" element={<OpdReminder />} />
             <Route path="/leads" element={<SearchLeads />} />
             <Route path="/add-lead" element={<AddLead />} />
             <Route path="/patient/:id" element={<PatientReport />} />
