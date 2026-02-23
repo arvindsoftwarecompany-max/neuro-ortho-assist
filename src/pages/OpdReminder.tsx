@@ -19,6 +19,7 @@ export default function OpdReminder() {
   const [showForm, setShowForm] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -29,6 +30,10 @@ export default function OpdReminder() {
 
   const filteredReminders = useMemo(() => {
     let data = reminders;
+    // Active filter from stat card click
+    if (activeFilter === 'todayFollowup') {
+      data = data.filter(r => r.reminder_1_day === today);
+    }
     if (search) {
       const q = search.toLowerCase();
       data = data.filter(r =>
@@ -44,14 +49,14 @@ export default function OpdReminder() {
       data = data.filter(r => r.next_visit <= to);
     }
     return data;
-  }, [reminders, search, dateFrom, dateTo]);
+  }, [reminders, search, dateFrom, dateTo, activeFilter, today]);
 
   const stats = useMemo(() => {
     const todayVisits = reminders.filter(r => r.next_visit === today).length;
-    const upcoming = reminders.filter(r => r.next_visit > today).length;
+    const todayFollowup = reminders.filter(r => r.reminder_1_day === today).length;
     const overdue = reminders.filter(r => r.next_visit && r.next_visit < today).length;
     const facilities = new Set(reminders.map(r => r.facility).filter(Boolean)).size;
-    return { total: reminders.length, todayVisits, upcoming, overdue, facilities };
+    return { total: reminders.length, todayVisits, todayFollowup, overdue, facilities };
   }, [reminders, today]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,7 +118,8 @@ export default function OpdReminder() {
           <StatCard title="Today's Visits" value={stats.todayVisits} icon={CalendarIcon} variant="green" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <StatCard title="Upcoming" value={stats.upcoming} icon={Bell} variant="amber" />
+          <StatCard title="Today Followup" value={stats.todayFollowup} icon={Bell} variant={activeFilter === 'todayFollowup' ? 'green' : 'amber'}
+            onClick={() => setActiveFilter(activeFilter === 'todayFollowup' ? null : 'todayFollowup')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <StatCard title="Overdue" value={stats.overdue} icon={Clock} variant="red" />
