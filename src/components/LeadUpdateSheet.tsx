@@ -40,7 +40,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!lead) return;
     if (!mobile.trim()) {
       toast({ title: 'Error', description: 'Mobile number is required', variant: 'destructive' });
@@ -63,6 +63,25 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
       toast({ title: 'No Changes', description: 'Nothing was changed.' });
       onClose();
       return;
+    }
+
+    // Send to n8n webhook
+    try {
+      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook-test/updatedr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: lead.lead_id,
+          patient_name: lead.patient_name,
+          mobile: mobile.trim(),
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTime,
+          followup_date: followupDate,
+          ...updates,
+        }),
+      });
+    } catch (err) {
+      console.error('[CRM] Update webhook error:', err);
     }
 
     onUpdate(lead.lead_id, updates);
