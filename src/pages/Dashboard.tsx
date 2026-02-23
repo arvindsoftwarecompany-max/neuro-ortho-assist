@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, CalendarCheck, Clock, XCircle, TrendingUp, Target, Bell, UserCheck,
-  Plus, RefreshCw, Bone, Brain
+  Plus, RefreshCw, Bone, Brain, Pencil
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useLeadsData } from '@/hooks/useLeadsData';
@@ -10,17 +10,19 @@ import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { CallStatus, Department } from '@/types/leads';
+import { CallStatus, Department, Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
+import LeadUpdateSheet from '@/components/LeadUpdateSheet';
 
 const COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#10B981', '#6B7280'];
 
 type DeptTab = 'All' | 'Orthopedics' | 'Neurology';
 
 export default function Dashboard() {
-  const { leads, stats, loading, lastUpdated, fetchData } = useLeadsData();
+  const { leads, stats, loading, lastUpdated, fetchData, updateLead } = useLeadsData();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DeptTab>('All');
+  const [editLead, setEditLead] = useState<Lead | null>(null);
 
   // Filter leads by selected department tab
   const filteredLeads = useMemo(() => {
@@ -247,9 +249,8 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">No appointments scheduled for today.</p>
               </div>
             ) : todayAppointments.map(lead => (
-              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20 cursor-pointer hover:bg-success/10 transition-colors"
-                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
-                <div className="flex items-center gap-3">
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20 hover:bg-success/10 transition-colors">
+                <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/patient/${lead.lead_id}`)}>
                   <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center text-xs font-bold text-success">
                     {lead.patient_name.charAt(0)}
                   </div>
@@ -258,9 +259,14 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{lead.appointment_time || 'TBD'} • Dr. {lead.doctor_assigned || 'Unassigned'}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <StatusBadge status={lead.call_status} />
-                  <p className="text-xs text-muted-foreground mt-1">{lead.department}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <StatusBadge status={lead.call_status} />
+                    <p className="text-xs text-muted-foreground mt-1">{lead.department}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
+                    <Pencil className="h-3 w-3" /> Update
+                  </Button>
                 </div>
               </div>
             ))}
@@ -283,9 +289,8 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
               </div>
             ) : todayFollowups.map(lead => (
-              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/20 cursor-pointer hover:bg-warning/10 transition-colors"
-                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
-                <div className="flex items-center gap-3">
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/20 hover:bg-warning/10 transition-colors">
+                <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/patient/${lead.lead_id}`)}>
                   <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center text-xs font-bold text-warning">
                     {lead.patient_name.charAt(0)}
                   </div>
@@ -294,7 +299,12 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{lead.department} • {lead.mobile}</p>
                   </div>
                 </div>
-                <StatusBadge status={lead.call_status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={lead.call_status} />
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
+                    <Pencil className="h-3 w-3" /> Update
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -319,9 +329,8 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">No overdue follow-ups. You're all caught up!</p>
               </div>
             ) : overdueFollowups.map(lead => (
-              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors"
-                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
-                <div className="flex items-center gap-3">
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20 hover:bg-destructive/10 transition-colors">
+                <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/patient/${lead.lead_id}`)}>
                   <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center text-xs font-bold text-destructive">
                     {lead.patient_name.charAt(0)}
                   </div>
@@ -330,7 +339,12 @@ export default function Dashboard() {
                     <p className="text-xs text-destructive">Due: {lead.followup_date} ⚠</p>
                   </div>
                 </div>
-                <StatusBadge status={lead.call_status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={lead.call_status} />
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
+                    <Pencil className="h-3 w-3" /> Update
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -363,6 +377,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <LeadUpdateSheet lead={editLead} open={!!editLead} onClose={() => setEditLead(null)} onUpdate={updateLead} />
     </div>
   );
 }
