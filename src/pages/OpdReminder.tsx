@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil
+  Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -23,11 +23,12 @@ export default function OpdReminder() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [editReminder, setEditReminder] = useState<OpdReminderType | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '' });
+  const [editForm, setEditForm] = useState({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: '' });
+  const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: ''
+    name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: ''
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -41,6 +42,9 @@ export default function OpdReminder() {
       data = data.filter(r => r.reminder_1_day === today);
     } else if (activeFilter === 'todayVisits') {
       data = data.filter(r => r.next_visit === today);
+    }
+    if (paymentFilter) {
+      data = data.filter(r => r.payment_type === paymentFilter);
     }
     if (search) {
       const q = search.toLowerCase();
@@ -57,7 +61,14 @@ export default function OpdReminder() {
       data = data.filter(r => r.next_visit <= to);
     }
     return data;
-  }, [reminders, search, dateFrom, dateTo, activeFilter, today]);
+  }, [reminders, search, dateFrom, dateTo, activeFilter, paymentFilter, today]);
+
+  const paymentStats = useMemo(() => ({
+    RGHS: reminders.filter(r => r.payment_type === 'RGHS').length,
+    ECHS: reminders.filter(r => r.payment_type === 'ECHS').length,
+    Cash: reminders.filter(r => r.payment_type === 'Cash').length,
+    Private: reminders.filter(r => r.payment_type === 'Private').length,
+  }), [reminders]);
 
   const stats = useMemo(() => {
     const todayVisits = reminders.filter(r => r.next_visit === today).length;
@@ -70,13 +81,13 @@ export default function OpdReminder() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addReminder(formData);
-    setFormData({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '' });
+    setFormData({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: '' });
     setShowForm(false);
   };
 
   const openEditSheet = (r: OpdReminderType) => {
     setEditReminder(r);
-    setEditForm({ name: r.name, mobile: r.mobile, city: r.city, facility: r.facility, next_visit: r.next_visit, reminder_1_day: r.reminder_1_day, time: r.time });
+    setEditForm({ name: r.name, mobile: r.mobile, city: r.city, facility: r.facility, next_visit: r.next_visit, reminder_1_day: r.reminder_1_day, time: r.time, payment_type: r.payment_type });
   };
 
   const handleUpdate = (e: React.FormEvent) => {
@@ -89,8 +100,8 @@ export default function OpdReminder() {
 
   const exportCSV = () => {
     if (!filteredReminders.length) return;
-    const headers = ['Name', 'Mobile', 'City', 'Facility', 'Next Visit', 'Reminder 1 Day', 'Time'];
-    const rows = filteredReminders.map(r => [r.name, r.mobile, r.city, r.facility, r.next_visit, r.reminder_1_day, r.time]);
+    const headers = ['Name', 'Mobile', 'City', 'Facility', 'Next Visit', 'Reminder 1 Day', 'Time', 'Payment Type'];
+    const rows = filteredReminders.map(r => [r.name, r.mobile, r.city, r.facility, r.next_visit, r.reminder_1_day, r.time, r.payment_type]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -150,6 +161,37 @@ export default function OpdReminder() {
           <StatCard title="Facilities" value={stats.facilities} icon={Building2} variant="purple" />
         </motion.div>
       </div>
+
+      {/* Payment Type Breakdown */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-primary" /> Payment Type Breakdown
+          {paymentFilter && (
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs ml-auto" onClick={() => setPaymentFilter(null)}>Clear Filter</Button>
+          )}
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {([
+            { label: 'RGHS', color: 'bg-blue-500/15 text-blue-600 border-blue-500/30', count: paymentStats.RGHS },
+            { label: 'ECHS', color: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30', count: paymentStats.ECHS },
+            { label: 'Cash', color: 'bg-amber-500/15 text-amber-600 border-amber-500/30', count: paymentStats.Cash },
+            { label: 'Private', color: 'bg-purple-500/15 text-purple-600 border-purple-500/30', count: paymentStats.Private },
+          ] as const).map(item => (
+            <div
+              key={item.label}
+              onClick={() => setPaymentFilter(paymentFilter === item.label ? null : item.label)}
+              className={cn(
+                "p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02]",
+                item.color,
+                paymentFilter === item.label ? "ring-2 ring-primary shadow-md" : "border-border/50"
+              )}
+            >
+              <p className="text-xs font-medium opacity-80">{item.label}</p>
+              <p className="text-2xl font-bold mt-1">{item.count}</p>
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Today's Appointments Section */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
@@ -217,9 +259,19 @@ export default function OpdReminder() {
               <Label className="text-xs">Reminder 1 Day</Label>
               <Input value={formData.reminder_1_day} onChange={e => setFormData(p => ({ ...p, reminder_1_day: e.target.value }))} placeholder="Yes/No" className="h-9 text-sm" />
             </div>
-            <div className="space-y-1.5">
+             <div className="space-y-1.5">
               <Label className="text-xs">Time</Label>
               <Input type="time" value={formData.time} onChange={e => setFormData(p => ({ ...p, time: e.target.value }))} className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Payment Type</Label>
+              <select value={formData.payment_type} onChange={e => setFormData(p => ({ ...p, payment_type: e.target.value }))} className="h-9 text-sm w-full rounded-md border border-input bg-background px-3">
+                <option value="">Select</option>
+                <option value="RGHS">RGHS</option>
+                <option value="ECHS">ECHS</option>
+                <option value="Cash">Cash</option>
+                <option value="Private">Private</option>
+              </select>
             </div>
             <div className="flex items-end">
               <Button type="submit" size="sm" className="w-full gap-2 h-9">
@@ -258,8 +310,8 @@ export default function OpdReminder() {
             <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" />
           </PopoverContent>
         </Popover>
-        {(dateFrom || dateTo || activeFilter) && (
-          <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setActiveFilter(null); }}>Clear All</Button>
+        {(dateFrom || dateTo || activeFilter || paymentFilter) && (
+          <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setActiveFilter(null); setPaymentFilter(null); }}>Clear All</Button>
         )}
         <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 text-xs gap-1 ml-auto">
           <Download className="h-3 w-3" /> Download CSV
@@ -378,6 +430,16 @@ export default function OpdReminder() {
             <div className="space-y-1.5">
               <Label className="text-xs">Time</Label>
               <Input type="time" value={editForm.time} onChange={e => setEditForm(p => ({ ...p, time: e.target.value }))} className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Payment Type</Label>
+              <select value={editForm.payment_type} onChange={e => setEditForm(p => ({ ...p, payment_type: e.target.value }))} className="h-9 text-sm w-full rounded-md border border-input bg-background px-3">
+                <option value="">Select</option>
+                <option value="RGHS">RGHS</option>
+                <option value="ECHS">ECHS</option>
+                <option value="Cash">Cash</option>
+                <option value="Private">Private</option>
+              </select>
             </div>
             <Button type="submit" className="w-full gap-2">
               <Pencil className="h-3.5 w-3.5" /> Update Reminder
