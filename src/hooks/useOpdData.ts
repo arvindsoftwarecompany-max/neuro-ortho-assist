@@ -57,6 +57,7 @@ function mapCSVToOpd(headers: string[], values: string[], index: number): OpdRem
     reminder_1_day: get('reminder1day') || get('reminder_1_day') || get('reminder') || '',
     time: get('time') || '',
     payment_type: normalizePayment(rawPayment),
+    remark: get('remark') || get('remarks') || '',
   };
 }
 

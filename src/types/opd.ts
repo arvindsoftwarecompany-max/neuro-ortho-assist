@@ -8,4 +8,5 @@ export interface OpdReminder {
   reminder_1_day: string;
   time: string;
   payment_type: string;
+  remark: string;
 }
