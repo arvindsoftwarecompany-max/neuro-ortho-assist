@@ -32,6 +32,27 @@ export default function OpdReminder() {
     name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: ''
   });
 
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchMobile, setSearchMobile] = useState('');
+  const [searchResults, setSearchResults] = useState<OpdReminderType[]>([]);
+  const [searchDone, setSearchDone] = useState(false);
+
+  const handlePatientSearch = () => {
+    if (!searchMobile.trim()) return;
+    const q = searchMobile.trim();
+    const results = reminders.filter(r => r.mobile.includes(q));
+    setSearchResults(results);
+    setSearchDone(true);
+  };
+
+  const handleSearchSelect = (r: OpdReminderType) => {
+    openEditSheet(r);
+    setShowSearch(false);
+    setSearchMobile('');
+    setSearchResults([]);
+    setSearchDone(false);
+  };
+
   const today = new Date().toISOString().split('T')[0];
 
   const todayAppointments = useMemo(() => reminders.filter(r => r.next_visit === today), [reminders, today]);
@@ -162,12 +183,69 @@ export default function OpdReminder() {
           <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
+          <Button variant="secondary" size="sm" className="gap-2" onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchMobile(''); setSearchResults([]); setSearchDone(false); } }}>
+            {showSearch ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+            {showSearch ? 'Close Search' : 'Search Patient'}
+          </Button>
           <Button size="sm" className="gap-2" onClick={() => setShowForm(!showForm)}>
             {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             {showForm ? 'Close Form' : 'Add Reminder'}
           </Button>
         </div>
       </motion.div>
+
+      {/* Search Patient Panel */}
+      {showSearch && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 ring-2 ring-secondary/30 shadow-lg">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Search className="h-4 w-4 text-primary" /> Search Existing Patient (Mobile Number)
+          </h3>
+          <div className="flex gap-2 items-center">
+            <Input
+              value={searchMobile}
+              onChange={e => { setSearchMobile(e.target.value); setSearchDone(false); }}
+              placeholder="Mobile number डालें..."
+              className="h-9 text-sm max-w-xs"
+              onKeyDown={e => e.key === 'Enter' && handlePatientSearch()}
+            />
+            <Button size="sm" className="h-9 gap-1" onClick={handlePatientSearch}>
+              <Search className="h-3.5 w-3.5" /> Search
+            </Button>
+          </div>
+          {searchDone && (
+            <div className="mt-4">
+              {searchResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">कोई Patient नहीं मिला इस mobile number से।</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{searchResults.length} Patient(s) मिले:</p>
+                  {searchResults.map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-border/50 hover:bg-primary/10 transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                          {r.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            📞 {r.mobile} • 🏙 {r.city || 'N/A'} • 🏥 {r.facility || 'N/A'} • 💳 {r.payment_type || 'N/A'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Next Visit: {r.next_visit || '-'} • Reminder: {r.reminder_1_day || '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button size="sm" className="h-7 px-3 text-xs gap-1 flex-shrink-0" onClick={() => handleSearchSelect(r)}>
+                        <Pencil className="h-3 w-3" /> Update
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Add Reminder Form - appears at top */}
       {showForm && (
