@@ -77,9 +77,18 @@ export default function OpdReminder() {
     return { total: reminders.length, todayVisits, todayFollowup, overdue, facilities };
   }, [reminders, today]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     addReminder(formData);
+    try {
+      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/newlook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+    } catch (err) {
+      console.error('Webhook failed:', err);
+    }
     setFormData({ name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: '' });
     setShowForm(false);
   };
