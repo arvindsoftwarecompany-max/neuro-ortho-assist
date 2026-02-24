@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -28,7 +29,7 @@ export default function OpdReminder() {
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: ''
+    name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: ''
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -81,7 +82,7 @@ export default function OpdReminder() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addReminder(formData);
-    setFormData({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: '' });
+    setFormData({ name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: '' });
     setShowForm(false);
   };
 
@@ -248,30 +249,12 @@ export default function OpdReminder() {
               <Input value={formData.city} onChange={e => setFormData(p => ({ ...p, city: e.target.value }))} placeholder="City" className="h-9 text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Facility</Label>
-              <Input value={formData.facility} onChange={e => setFormData(p => ({ ...p, facility: e.target.value }))} placeholder="Facility name" className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
               <Label className="text-xs">Next Visit *</Label>
               <Input type="date" value={formData.next_visit} onChange={e => setFormData(p => ({ ...p, next_visit: e.target.value }))} required className="h-9 text-sm" />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Reminder 1 Day</Label>
-              <Input value={formData.reminder_1_day} onChange={e => setFormData(p => ({ ...p, reminder_1_day: e.target.value }))} placeholder="Yes/No" className="h-9 text-sm" />
-            </div>
-             <div className="space-y-1.5">
-              <Label className="text-xs">Time</Label>
-              <Input type="time" value={formData.time} onChange={e => setFormData(p => ({ ...p, time: e.target.value }))} className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Payment Type</Label>
-              <select value={formData.payment_type} onChange={e => setFormData(p => ({ ...p, payment_type: e.target.value }))} className="h-9 text-sm w-full rounded-md border border-input bg-background px-3">
-                <option value="">Select</option>
-                <option value="RGHS">RGHS</option>
-                <option value="ECHS">ECHS</option>
-                <option value="Cash">Cash</option>
-                <option value="Private">Private</option>
-              </select>
+            <div className="md:col-span-2 lg:col-span-4 space-y-1.5">
+              <Label className="text-xs">Remark (Patient ने क्या बोला)</Label>
+              <Textarea value={formData.remark} onChange={e => setFormData(p => ({ ...p, remark: e.target.value }))} placeholder="Patient की बात लिखें..." className="text-sm min-h-[60px]" />
             </div>
             <div className="flex items-end">
               <Button type="submit" size="sm" className="w-full gap-2 h-9">
