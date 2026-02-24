@@ -54,6 +54,9 @@ export default function OpdReminder() {
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split('T')[0];
 
   const todayAppointments = useMemo(() => reminders.filter(r => r.next_visit === today), [reminders, today]);
 
@@ -63,6 +66,8 @@ export default function OpdReminder() {
       data = data.filter(r => r.reminder_1_day === today);
     } else if (activeFilter === 'todayVisits') {
       data = data.filter(r => r.next_visit === today);
+    } else if (activeFilter === 'yesterdayMissed') {
+      data = data.filter(r => r.next_visit === yesterday);
     }
     if (paymentFilter) {
       data = data.filter(r => r.payment_type === paymentFilter);
@@ -94,10 +99,12 @@ export default function OpdReminder() {
   const stats = useMemo(() => {
     const todayVisits = reminders.filter(r => r.next_visit === today).length;
     const todayFollowup = reminders.filter(r => r.reminder_1_day === today).length;
-    const overdue = reminders.filter(r => r.next_visit && r.next_visit < today).length;
+    const yesterdayMissed = reminders.filter(r => r.next_visit === yesterday).length;
     const facilities = new Set(reminders.map(r => r.facility).filter(Boolean)).size;
-    return { total: reminders.length, todayVisits, todayFollowup, overdue, facilities };
-  }, [reminders, today]);
+    return { total: reminders.length, todayVisits, todayFollowup, yesterdayMissed, facilities };
+  }, [reminders, today, yesterday]);
+
+  const yesterdayMissedList = useMemo(() => reminders.filter(r => r.next_visit === yesterday), [reminders, yesterday]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,7 +314,8 @@ export default function OpdReminder() {
             onClick={() => setActiveFilter(activeFilter === 'todayFollowup' ? null : 'todayFollowup')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <StatCard title="Overdue" value={stats.overdue} icon={Clock} variant="red" />
+          <StatCard title="Yesterday Missed" value={stats.yesterdayMissed} icon={Clock} variant={activeFilter === 'yesterdayMissed' ? 'red' : 'red'}
+            onClick={() => setActiveFilter(activeFilter === 'yesterdayMissed' ? null : 'yesterdayMissed')} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <StatCard title="Facilities" value={stats.facilities} icon={Building2} variant="purple" />
@@ -379,6 +387,44 @@ export default function OpdReminder() {
           ))}
         </div>
       </motion.div>
+
+      {/* Yesterday Missed Appointments */}
+      {activeFilter === 'yesterdayMissed' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 ring-2 ring-destructive/30">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-destructive" /> Yesterday Missed Appointments
+            <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded-full">{yesterdayMissedList.length}</span>
+          </h3>
+          <div className="space-y-3 max-h-[350px] overflow-y-auto">
+            {yesterdayMissedList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">कल कोई missed appointment नहीं है।</p>
+            ) : yesterdayMissedList.map(r => (
+              <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border-l-2 border-l-destructive hover:bg-destructive/10 transition-colors">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center text-xs font-bold text-destructive flex-shrink-0">
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
+                    <p className="text-xs text-muted-foreground">📞 {r.mobile} • 🏙 {r.city || 'N/A'} • 💳 {r.payment_type || 'N/A'}</p>
+                    <p className="text-xs text-destructive/80">Appointment थी: {r.next_visit} — नहीं आए</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <a href={`tel:${r.mobile}`} className="inline-flex">
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 border-success/30 text-success hover:bg-success/10">
+                      <Phone className="h-3 w-3" /> Call
+                    </Button>
+                  </a>
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => openEditSheet(r)}>
+                    <Pencil className="h-3 w-3" /> Update
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
