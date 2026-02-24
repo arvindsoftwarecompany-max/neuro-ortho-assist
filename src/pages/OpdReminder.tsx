@@ -421,7 +421,23 @@ export default function OpdReminder() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Next Visit</Label>
-              <Input type="date" value={editForm.next_visit} onChange={e => setEditForm(p => ({ ...p, next_visit: e.target.value }))} className="h-9 text-sm" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full h-9 text-sm justify-start text-left font-normal", !editForm.next_visit && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {editForm.next_visit || 'Select date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editForm.next_visit ? new Date(editForm.next_visit) : undefined}
+                    onSelect={(date) => setEditForm(p => ({ ...p, next_visit: date ? format(date, 'yyyy-MM-dd') : '' }))}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Reminder 1 Day</Label>
