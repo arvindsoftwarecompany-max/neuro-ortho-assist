@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { toast } from '@/hooks/use-toast';
 import {
   Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard
 } from 'lucide-react';
@@ -98,11 +99,30 @@ export default function OpdReminder() {
     setEditForm({ name: r.name, mobile: r.mobile, city: r.city, facility: r.facility, next_visit: r.next_visit, reminder_1_day: r.reminder_1_day, remark: r.remark || '', payment_type: r.payment_type });
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const [updating, setUpdating] = useState(false);
+
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editReminder) {
+    if (!editReminder) return;
+    setUpdating(true);
+    try {
+      const payload = { ...editForm, id: editReminder.id };
+      const res = await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/opd123', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Webhook failed');
       updateReminder(editReminder.id, editForm);
       setEditReminder(null);
+      toast({ title: 'Success', description: 'OPD Reminder updated & synced!' });
+    } catch (err) {
+      console.error('[OPD] Webhook error:', err);
+      updateReminder(editReminder.id, editForm);
+      setEditReminder(null);
+      toast({ title: 'Warning', description: 'Updated locally but webhook sync failed.', variant: 'destructive' });
+    } finally {
+      setUpdating(false);
     }
   };
 
