@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import {
   Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard
 } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,6 +10,7 @@ import { useOpdData } from '@/hooks/useOpdData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import StatCard from '@/components/StatCard';
@@ -27,14 +27,12 @@ export default function OpdReminder() {
   const [editForm, setEditForm] = useState({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: '' });
   const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: ''
   });
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Today's appointments from Next Visit column
   const todayAppointments = useMemo(() => reminders.filter(r => r.next_visit === today), [reminders, today]);
 
   const filteredReminders = useMemo(() => {
@@ -142,6 +140,52 @@ export default function OpdReminder() {
         </div>
       </motion.div>
 
+      {/* Add Reminder Form - appears at top */}
+      {showForm && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 ring-2 ring-primary/30 shadow-lg">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" /> Add New OPD Reminder
+          </h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Name *</Label>
+              <Input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} required placeholder="Patient name" className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Mobile *</Label>
+              <Input value={formData.mobile} onChange={e => setFormData(p => ({ ...p, mobile: e.target.value }))} required placeholder="Mobile number" className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">City</Label>
+              <Input value={formData.city} onChange={e => setFormData(p => ({ ...p, city: e.target.value }))} placeholder="City" className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Next Visit *</Label>
+              <Input type="date" value={formData.next_visit} onChange={e => setFormData(p => ({ ...p, next_visit: e.target.value }))} required className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Payment Type</Label>
+              <select value={formData.payment_type} onChange={e => setFormData(p => ({ ...p, payment_type: e.target.value }))} className="h-9 text-sm w-full rounded-md border border-input bg-background px-3">
+                <option value="">Select</option>
+                <option value="RGHS">RGHS</option>
+                <option value="ECHS">ECHS</option>
+                <option value="Cash">Cash</option>
+                <option value="Private">Private</option>
+              </select>
+            </div>
+            <div className="md:col-span-2 lg:col-span-3 space-y-1.5">
+              <Label className="text-xs">Remark (Patient ने क्या बोला)</Label>
+              <Textarea value={formData.remark} onChange={e => setFormData(p => ({ ...p, remark: e.target.value }))} placeholder="Patient की बात लिखें..." className="text-sm min-h-[60px]" />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" size="sm" className="w-full gap-2 h-9">
+                <Plus className="h-3.5 w-3.5" /> Save Reminder
+              </Button>
+            </div>
+          </form>
+        </motion.div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
@@ -228,42 +272,6 @@ export default function OpdReminder() {
           ))}
         </div>
       </motion.div>
-
-      {/* Add Reminder Form */}
-      {showForm && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" /> Add New OPD Reminder
-          </h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Name *</Label>
-              <Input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} required placeholder="Patient name" className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Mobile *</Label>
-              <Input value={formData.mobile} onChange={e => setFormData(p => ({ ...p, mobile: e.target.value }))} required placeholder="Mobile number" className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">City</Label>
-              <Input value={formData.city} onChange={e => setFormData(p => ({ ...p, city: e.target.value }))} placeholder="City" className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Next Visit *</Label>
-              <Input type="date" value={formData.next_visit} onChange={e => setFormData(p => ({ ...p, next_visit: e.target.value }))} required className="h-9 text-sm" />
-            </div>
-            <div className="md:col-span-2 lg:col-span-4 space-y-1.5">
-              <Label className="text-xs">Remark (Patient ने क्या बोला)</Label>
-              <Textarea value={formData.remark} onChange={e => setFormData(p => ({ ...p, remark: e.target.value }))} placeholder="Patient की बात लिखें..." className="text-sm min-h-[60px]" />
-            </div>
-            <div className="flex items-end">
-              <Button type="submit" size="sm" className="w-full gap-2 h-9">
-                <Plus className="h-3.5 w-3.5" /> Save Reminder
-              </Button>
-            </div>
-          </form>
-        </motion.div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
