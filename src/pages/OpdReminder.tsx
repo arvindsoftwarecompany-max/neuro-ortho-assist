@@ -24,7 +24,7 @@ export default function OpdReminder() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [editReminder, setEditReminder] = useState<OpdReminderType | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', time: '', payment_type: '' });
+  const [editForm, setEditForm] = useState({ name: '', mobile: '', city: '', facility: '', next_visit: '', reminder_1_day: '', remark: '', payment_type: '' });
   const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -95,7 +95,7 @@ export default function OpdReminder() {
 
   const openEditSheet = (r: OpdReminderType) => {
     setEditReminder(r);
-    setEditForm({ name: r.name, mobile: r.mobile, city: r.city, facility: r.facility, next_visit: r.next_visit, reminder_1_day: r.reminder_1_day, time: r.time, payment_type: r.payment_type });
+    setEditForm({ name: r.name, mobile: r.mobile, city: r.city, facility: r.facility, next_visit: r.next_visit, reminder_1_day: r.reminder_1_day, remark: r.remark || '', payment_type: r.payment_type });
   };
 
   const handleUpdate = (e: React.FormEvent) => {
@@ -428,8 +428,8 @@ export default function OpdReminder() {
               <Input value={editForm.reminder_1_day} onChange={e => setEditForm(p => ({ ...p, reminder_1_day: e.target.value }))} className="h-9 text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Time</Label>
-              <Input type="time" value={editForm.time} onChange={e => setEditForm(p => ({ ...p, time: e.target.value }))} className="h-9 text-sm" />
+              <Label className="text-xs">Remark (Patient ने क्या बोला)</Label>
+              <Textarea value={editForm.remark} onChange={e => setEditForm(p => ({ ...p, remark: e.target.value }))} placeholder="Patient की बात लिखें..." className="text-sm min-h-[60px]" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Payment Type</Label>
