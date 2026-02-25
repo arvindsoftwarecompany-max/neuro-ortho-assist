@@ -44,6 +44,7 @@ const DOCTORS = ['Dr. Sharma', 'Dr. Gupta', 'Dr. Patel', 'Dr. Singh', 'Dr. Verma
 export default function IpdFollowup() {
   const { patients, loading, error, lastUpdated, addPatient, markFollowUpDone, rescheduleFollowUp, deletePatient, updatePatient, fetchData } = useIpdData();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [cardFilter, setCardFilter] = useState<'dueToday' | 'overdue' | 'completedWeek' | 'totalActive' | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDept, setFilterDept] = useState<string>('all');
@@ -85,6 +86,40 @@ export default function IpdFollowup() {
     });
     return { dueToday, overdue, completedThisWeek, totalActive };
   }, [patients, today]);
+
+  // Card filter: patients/calls matching the clicked stat
+  const cardFilteredCalls = useMemo(() => {
+    if (!cardFilter) return [];
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    const calls: { patient: IpdPatient; followUp: FollowUp; label: string }[] = [];
+
+    patients.forEach(p => {
+      if (cardFilter === 'totalActive') {
+        if (p.status === 'active') {
+          const nextFU = p.followUps.find(f => f.status === 'pending' || f.status === 'rescheduled');
+          if (nextFU) calls.push({ patient: p, followUp: nextFU, label: 'Active' });
+          else calls.push({ patient: p, followUp: p.followUps[0], label: 'Active' });
+        }
+        return;
+      }
+      p.followUps.forEach(f => {
+        if (cardFilter === 'dueToday') {
+          if ((f.status === 'pending' || f.status === 'rescheduled') && isToday(parseISO(f.scheduledDate))) {
+            calls.push({ patient: p, followUp: f, label: 'Due Today' });
+          }
+        } else if (cardFilter === 'overdue') {
+          if ((f.status === 'pending' || f.status === 'rescheduled') && isBefore(parseISO(f.scheduledDate), today) && !isToday(parseISO(f.scheduledDate))) {
+            calls.push({ patient: p, followUp: f, label: `${differenceInDays(today, parseISO(f.scheduledDate))} days overdue` });
+          }
+        } else if (cardFilter === 'completedWeek') {
+          if (f.status === 'completed' && f.completedDate && parseISO(f.completedDate) >= weekAgo) {
+            calls.push({ patient: p, followUp: f, label: 'Completed' });
+          }
+        }
+      });
+    });
+    return calls;
+  }, [patients, cardFilter, today]);
 
   // Today's calls: due today or overdue
   const todaysCalls = useMemo(() => {
@@ -222,7 +257,7 @@ export default function IpdFollowup() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-          <Card className="stat-card-amber cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+          <Card className={`stat-card-amber cursor-pointer ${cardFilter === 'dueToday' ? 'ring-2 ring-[hsl(var(--warning))]' : ''}`} onClick={() => setCardFilter(cardFilter === 'dueToday' ? null : 'dueToday')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -235,7 +270,7 @@ export default function IpdFollowup() {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="stat-card-red cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+          <Card className={`stat-card-red cursor-pointer ${cardFilter === 'overdue' ? 'ring-2 ring-destructive' : ''}`} onClick={() => setCardFilter(cardFilter === 'overdue' ? null : 'overdue')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -248,7 +283,7 @@ export default function IpdFollowup() {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="stat-card-green">
+          <Card className={`stat-card-green cursor-pointer ${cardFilter === 'completedWeek' ? 'ring-2 ring-[hsl(var(--success))]' : ''}`} onClick={() => setCardFilter(cardFilter === 'completedWeek' ? null : 'completedWeek')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -261,7 +296,7 @@ export default function IpdFollowup() {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="stat-card-blue">
+          <Card className={`stat-card-blue cursor-pointer ${cardFilter === 'totalActive' ? 'ring-2 ring-primary' : ''}`} onClick={() => setCardFilter(cardFilter === 'totalActive' ? null : 'totalActive')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -274,6 +309,69 @@ export default function IpdFollowup() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Card Filter Results */}
+      <AnimatePresence>
+        {cardFilter && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+            <Card className="glass-card">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm">
+                  {cardFilter === 'dueToday' && `📞 Calls Due Today (${cardFilteredCalls.length})`}
+                  {cardFilter === 'overdue' && `🔴 Overdue Calls (${cardFilteredCalls.length})`}
+                  {cardFilter === 'completedWeek' && `✅ Completed This Week (${cardFilteredCalls.length})`}
+                  {cardFilter === 'totalActive' && `👥 Total Active Patients (${cardFilteredCalls.length})`}
+                </CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setCardFilter(null)}>
+                  <X className="h-4 w-4 mr-1" /> Close
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+                {cardFilteredCalls.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No records found</p>
+                ) : (
+                  cardFilteredCalls.map(({ patient: p, followUp: f, label }, i) => (
+                    <div key={`${p.id}-${f.id}-${i}`} className={`flex flex-col md:flex-row md:items-center justify-between gap-2 p-3 rounded-lg border-l-4 ${
+                      cardFilter === 'overdue' ? 'border-l-destructive bg-destructive/5' :
+                      cardFilter === 'dueToday' ? 'border-l-[hsl(var(--warning))] bg-[hsl(var(--warning))]/5' :
+                      cardFilter === 'completedWeek' ? 'border-l-[hsl(var(--success))] bg-[hsl(var(--success))]/5' :
+                      'border-l-primary bg-primary/5'
+                    }`}>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{p.name}</span>
+                          <Badge variant="outline" className="text-[10px]">{f.type} Follow-up</Badge>
+                          <Badge className="text-[10px] bg-muted text-muted-foreground">{label}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                          <span>📱 {p.mobile}</span>
+                          <span>🏥 IPD: {p.ipdNumber}</span>
+                          <span>🩺 {p.diagnosis}</span>
+                          <span>👨‍⚕️ {p.doctor}</span>
+                          <span>📅 {f.scheduledDate}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button size="sm" variant="outline" onClick={() => window.open(`tel:${p.mobile}`)}>
+                          <Phone className="h-3.5 w-3.5 mr-1" /> Call
+                        </Button>
+                        {(f.status === 'pending' || f.status === 'rescheduled') && (
+                          <Button size="sm" onClick={() => { setCallDialog({ patient: p, followUp: f }); setCallNotes(''); setCallStatus('completed'); }}>
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" /> Update
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedPatient(p)}>
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
