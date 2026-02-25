@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Phone, Plus, Search, CheckCircle, Clock, AlertTriangle, Users,
   PhoneCall, FileText, CalendarDays, Download, Trash2, Eye, Edit, X,
-  PhoneOff, RotateCcw, Building
+  PhoneOff, RotateCcw, Building, RefreshCw, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,7 +42,7 @@ const DEPARTMENTS = ['Orthopedics', 'Neurology', 'General Surgery', 'Medicine', 
 const DOCTORS = ['Dr. Sharma', 'Dr. Gupta', 'Dr. Patel', 'Dr. Singh', 'Dr. Verma', 'Other'];
 
 export default function IpdFollowup() {
-  const { patients, addPatient, markFollowUpDone, rescheduleFollowUp, deletePatient, updatePatient } = useIpdData();
+  const { patients, loading, error, lastUpdated, addPatient, markFollowUpDone, rescheduleFollowUp, deletePatient, updatePatient, fetchData } = useIpdData();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -200,9 +200,16 @@ export default function IpdFollowup() {
             <Building className="h-7 w-7 text-primary" />
             IPD Follow-up Management
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Discharge patient follow-up tracking & call management</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Discharge patient follow-up tracking & call management
+            {error && <span className="ml-2 text-[hsl(var(--warning))]">({error})</span>}
+            {lastUpdated && <span className="ml-2">· Updated: {format(lastUpdated, 'hh:mm a')}</span>}
+          </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => { fetchData(); toast.success('Data refreshed'); }} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
           <Button onClick={() => setShowAddForm(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Add Patient
           </Button>
