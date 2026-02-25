@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/opd-reminder', label: 'OPD Reminder', icon: Bell },
+  { path: '/ipd-followup', label: 'IPD Follow-up', icon: Activity },
   { path: '/leads', label: 'Search Leads', icon: Search },
   { path: '/add-lead', label: 'Add Lead', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },

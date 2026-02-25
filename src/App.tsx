@@ -12,6 +12,7 @@ import Analytics from "@/pages/Analytics";
 import CalendarView from "@/pages/CalendarView";
 import SettingsPage from "@/pages/SettingsPage";
 import OpdReminder from "@/pages/OpdReminder";
+import IpdFollowup from "@/pages/IpdFollowup";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/opd-reminder" element={<OpdReminder />} />
+            <Route path="/ipd-followup" element={<IpdFollowup />} />
             <Route path="/leads" element={<SearchLeads />} />
             <Route path="/add-lead" element={<AddLead />} />
             <Route path="/patient/:id" element={<PatientReport />} />
