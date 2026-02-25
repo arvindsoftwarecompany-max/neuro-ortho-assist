@@ -58,25 +58,31 @@ function parseDate(dateStr: string): string {
 
 function mapCSVToPatient(headers: string[], values: string[], index: number): IpdPatient {
   const get = (name: string) => {
-    const normalized = name.toLowerCase().replace(/[_\s]/g, '');
-    const idx = headers.findIndex(h => h.toLowerCase().replace(/[_\s]/g, '') === normalized);
+    const normalized = name.toLowerCase().replace(/[_\s\/\-]/g, '');
+    const idx = headers.findIndex(h => h.toLowerCase().replace(/[_\s\/\-]/g, '') === normalized);
     return idx >= 0 ? (values[idx] || '').trim() : '';
   };
 
   const dischargeDate = parseDate(get('dischargedate') || get('discharge_date') || get('discharge') || '');
 
+  // Map call status from sheet
+  const rawStatus = (get('callstatus') || get('call_status') || get('status') || '').toLowerCase().trim();
+  let patientStatus: 'active' | 'completed' | 'readmitted' = 'active';
+  if (rawStatus === 'completed') patientStatus = 'completed';
+  else if (rawStatus === 'readmitted') patientStatus = 'readmitted';
+
   const patient: IpdPatient = {
     id: `csv-${index}`,
-    name: get('name') || get('patientname') || get('patient_name') || 'Unknown',
-    mobile: get('mobile') || get('phone') || get('mobileno') || get('mobile_no') || get('contact') || '',
+    name: get('patientname') || get('patient_name') || get('name') || 'Unknown',
+    mobile: get('mobilenumber') || get('mobile_number') || get('mobile') || get('phone') || get('contact') || '',
     ipdNumber: get('ipdnumber') || get('ipd_number') || get('ipdno') || get('ipd_no') || get('ipd') || String(index + 1),
     admissionDate: parseDate(get('admissiondate') || get('admission_date') || get('admission') || ''),
     dischargeDate,
-    diagnosis: get('diagnosis') || get('disease') || get('problem') || '',
-    doctor: get('doctor') || get('doctorassigned') || get('doctor_assigned') || get('attendingdoctor') || '',
+    diagnosis: get('diseasediagnosis') || get('disease/diagnosis') || get('diagnosis') || get('disease') || '',
+    doctor: get('attendingdoctor') || get('attending_doctor') || get('doctor') || get('doctorassigned') || '',
     department: get('department') || get('dept') || '',
-    followUpNotes: get('followupnotes') || get('followup_notes') || get('notes') || get('remarks') || get('remark') || '',
-    status: 'active',
+    followUpNotes: get('followupnotes') || get('followup_notes') || get('follow-upnotes') || get('notes') || get('remarks') || '',
+    status: patientStatus,
     followUps: dischargeDate ? createFollowUps(dischargeDate) : [],
     createdAt: new Date().toISOString(),
   };
