@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLeadsData } from '@/hooks/useLeadsData';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,7 @@ const STEPS = ['Basic Info', 'Address', 'Medical Info', 'Appointment', 'Addition
 export default function AddLead() {
   const navigate = useNavigate();
   const { addLead } = useLeadsData();
+  const { profile } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     patient_name: '', mobile: '', email: '', age: '', gender: 'Male',
@@ -45,13 +47,15 @@ export default function AddLead() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadData),
-      });
-
-      if (!res.ok) throw new Error('Webhook failed');
+      const webhookUrl = profile?.webhook_lead_url;
+      if (webhookUrl) {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(leadData),
+        });
+        if (!res.ok) throw new Error('Webhook failed');
+      }
 
       addLead({ ...leadData, lead_id: 0 } as any);
       toast({ title: 'Success', description: 'Lead added successfully!' });
