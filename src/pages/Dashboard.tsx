@@ -9,6 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useLeadsData } from '@/hooks/useLeadsData';
+import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { motion } from 'framer-motion';
 import { CallStatus, Department, Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 import LeadUpdateSheet from '@/components/LeadUpdateSheet';
+import LeadActionButtons from '@/components/LeadActionButtons';
 import { DEPARTMENTS, getDeptConfig } from '@/config/departments';
 
 const COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#10B981', '#6B7280'];
@@ -24,6 +26,7 @@ type DeptTab = string;
 
 export default function Dashboard() {
   const { leads, stats, loading, lastUpdated, fetchData, updateLead } = useLeadsData();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DeptTab>('All');
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -304,6 +307,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <LeadActionButtons lead={lead} hospitalName={profile?.hospital_name || 'Hospital'} />
                         <StatusBadge status={lead.call_status} />
                         <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
                           <Pencil className="h-3 w-3" /> Update
@@ -421,6 +425,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <LeadActionButtons lead={lead} hospitalName={profile?.hospital_name || 'Hospital'} />
                   <div className="text-right">
                     <StatusBadge status={lead.call_status} />
                     <p className="text-xs text-muted-foreground mt-1">{lead.department}</p>
@@ -461,6 +466,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <LeadActionButtons lead={lead} hospitalName={profile?.hospital_name || 'Hospital'} />
                   <StatusBadge status={lead.call_status} />
                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
                     <Pencil className="h-3 w-3" /> Update
@@ -501,6 +507,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <LeadActionButtons lead={lead} hospitalName={profile?.hospital_name || 'Hospital'} />
                   <StatusBadge status={lead.call_status} />
                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setEditLead(lead); }}>
                     <Pencil className="h-3 w-3" /> Update
