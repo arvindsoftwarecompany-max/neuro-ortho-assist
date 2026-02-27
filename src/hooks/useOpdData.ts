@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { OpdReminder } from '@/types/opd';
-
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1Pw8tcbuh_DcOBS2Z-Blufq7Uqm7LYFNMFu1sMxmY7uY/export?format=csv';
+import { useAuth } from '@/contexts/AuthContext';
 
 function parseCSVRow(row: string): string[] {
   const result: string[] = [];
@@ -62,14 +61,21 @@ function mapCSVToOpd(headers: string[], values: string[], index: number): OpdRem
 }
 
 export function useOpdData() {
+  const { profile } = useAuth();
+  const csvUrl = profile?.google_sheet_opd_url || '';
   const [reminders, setReminders] = useState<OpdReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!csvUrl) {
+      setLoading(false);
+      setError('No Google Sheet URL configured');
+      return;
+    }
     try {
-      const res = await fetch(CSV_URL);
+      const res = await fetch(csvUrl);
       if (!res.ok) throw new Error('Failed to fetch');
       const text = await res.text();
       const lines = text.split('\n').filter(l => l.trim());
@@ -91,7 +97,7 @@ export function useOpdData() {
       setLoading(false);
       setLastUpdated(new Date());
     }
-  }, []);
+  }, [csvUrl]);
 
   useEffect(() => {
     fetchData();

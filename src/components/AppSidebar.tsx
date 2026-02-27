@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, UserPlus, BarChart3, Calendar, Settings, 
-  Menu, X, Activity, Brain, Bone, Bell
+  Menu, X, Activity, Brain, Bone, Bell, LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const navItems = [
 ];
 
 export default function AppSidebar() {
+  const { signOut, profile } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
@@ -54,7 +56,7 @@ export default function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <h1 className="text-sm font-bold text-foreground leading-tight">Ortho Neuro</h1>
+              <h1 className="text-sm font-bold text-foreground leading-tight">{profile?.hospital_name || 'Ortho Neuro'}</h1>
               <p className="text-[10px] text-muted-foreground">Hospital CRM</p>
             </div>
           )}
@@ -105,7 +107,14 @@ export default function AppSidebar() {
 
         {/* Footer */}
         {!collapsed && (
-          <div className="p-4 border-t border-border/50">
+          <div className="p-4 border-t border-border/50 space-y-2">
+            <button
+              onClick={signOut}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] text-muted-foreground">Powered by</p>
               <p className="text-xs font-semibold gradient-text">OrthoNeuro CRM</p>

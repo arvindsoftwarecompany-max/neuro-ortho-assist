@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Lead, DashboardStats, CallStatus, Department } from '@/types/leads';
-
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1cyEo1r6_AOG4cSvGz2ZRYla4oiGYiXzvZMg6k1ZOIcA/export?format=csv';
+import { useAuth } from '@/contexts/AuthContext';
 
 function parseCSVRow(row: string): string[] {
   const result: string[] = [];
@@ -127,14 +126,21 @@ function computeStats(leads: Lead[]): DashboardStats {
 }
 
 export function useLeadsData() {
+  const { profile } = useAuth();
+  const csvUrl = profile?.google_sheet_leads_url || '';
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!csvUrl) {
+      setLoading(false);
+      setError('No Google Sheet URL configured');
+      return;
+    }
     try {
-      const res = await fetch(CSV_URL);
+      const res = await fetch(csvUrl);
       if (!res.ok) throw new Error('Failed to fetch');
       const text = await res.text();
       const lines = text.split('\n').filter(l => l.trim());
@@ -163,7 +169,7 @@ export function useLeadsData() {
       setLoading(false);
       setLastUpdated(new Date());
     }
-  }, []);
+  }, [csvUrl]);
 
   useEffect(() => {
     fetchData();
