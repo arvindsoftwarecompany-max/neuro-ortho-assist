@@ -39,7 +39,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('user_id', userId)
       .single();
-    if (data) setProfile(data);
+    if (data) {
+      if (data.is_active === false) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+        // Show alert for inactive user
+        setTimeout(() => {
+          alert('Aapka account deactivate hai. Admin se sampark karein.');
+        }, 100);
+        return;
+      }
+      setProfile(data);
+    }
   };
 
   const refreshProfile = async () => {
