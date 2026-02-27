@@ -15,6 +15,8 @@ import SettingsPage from "@/pages/SettingsPage";
 import OpdReminder from "@/pages/OpdReminder";
 import IpdFollowup from "@/pages/IpdFollowup";
 import AuthPage from "@/pages/AuthPage";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -49,6 +51,8 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
+    <Route path="/admin" element={<AdminLogin />} />
+    <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/" element={<Dashboard />} />
       <Route path="/opd-reminder" element={<OpdReminder />} />
