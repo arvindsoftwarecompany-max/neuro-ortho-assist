@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 
 interface UserProfile {
   id: string;
-  user_id: string;
+  user_id: string; // UUID from profiles
   hospital_name: string;
   owner_name: string;
   phone: string;
