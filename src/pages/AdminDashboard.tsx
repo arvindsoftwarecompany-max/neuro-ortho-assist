@@ -58,10 +58,7 @@ export default function AdminDashboard() {
 
   const loadUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_profiles_with_email');
 
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -118,6 +115,7 @@ export default function AdminDashboard() {
   const filteredUsers = users.filter(u =>
     (u.hospital_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.owner_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.user_id || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -224,7 +222,7 @@ export default function AdminDashboard() {
                             <Users className="h-3 w-3" /> {profile.owner_name || 'N/A'}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" /> {profile.user_id}
+                            <Mail className="h-3 w-3" /> {profile.email || 'N/A'}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" /> Joined: {format(new Date(profile.created_at), 'dd MMM yyyy')}
