@@ -68,9 +68,9 @@ export default function ConfigPage() {
           <div className="mx-auto w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center glow-blue mb-4">
             <Activity className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold gradient-text">CRM Configuration</h1>
+          <h1 className="text-2xl font-bold gradient-text">MedCRM Pro</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Apne Google Sheet URLs aur Webhook URLs dalein
+            Apne hospital ke Google Sheet URLs aur Webhook URLs configure karein
           </p>
         </motion.div>
 

@@ -54,9 +54,9 @@ export default function AuthPage() {
           <div className="mx-auto w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center glow-blue">
             <Activity className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-2xl gradient-text">Ortho Neuro CRM</CardTitle>
+          <CardTitle className="text-2xl gradient-text">MedCRM Pro</CardTitle>
           <CardDescription>
-            {isLogin ? 'Apne account mein login karein' : 'Naya account banayein'}
+            {isLogin ? 'Apne account mein login karein' : 'Apne hospital ka naya account banayein'}
           </CardDescription>
         </CardHeader>
         <CardContent>

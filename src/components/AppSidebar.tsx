@@ -117,7 +117,7 @@ export default function AppSidebar() {
             </button>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] text-muted-foreground">Powered by</p>
-              <p className="text-xs font-semibold gradient-text">OrthoNeuro CRM</p>
+              <p className="text-xs font-semibold gradient-text">MedCRM Pro</p>
             </div>
           </div>
         )}
