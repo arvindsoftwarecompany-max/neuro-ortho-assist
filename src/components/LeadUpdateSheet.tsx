@@ -5,39 +5,68 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Lead } from '@/types/leads';
-import { Phone, Calendar, Clock, Save } from 'lucide-react';
+import { Phone, Calendar, Clock, Save, MessageCircle, CheckCircle2 } from 'lucide-react';
 
 interface LeadUpdateSheetProps {
   lead: Lead | null;
   open: boolean;
   onClose: () => void;
   onUpdate: (id: number, data: Partial<Lead>) => void;
+  hospitalName?: string;
 }
 
-export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadUpdateSheetProps) {
+function buildWhatsAppMessage(lead: Lead, hospitalName: string): string {
+  const lines = [
+    `🏥 *${hospitalName}*`,
+    '',
+    `नमस्ते *${lead.patient_name}* जी,`,
+    '',
+    `हम ${hospitalName} से बात कर रहे हैं।`,
+  ];
+  if (lead.department) lines.push(`📋 *विभाग:* ${lead.department}`);
+  if (lead.doctor_assigned) lines.push(`👨‍⚕️ *डॉक्टर:* Dr. ${lead.doctor_assigned}`);
+  if (lead.appointment_date) {
+    const d = new Date(lead.appointment_date);
+    const dateStr = d.toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    lines.push(`📅 *अगली अपॉइंटमेंट:* ${dateStr}${lead.appointment_time ? ` | ⏰ ${lead.appointment_time}` : ''}`);
+  }
+  if (lead.followup_date) {
+    const d = new Date(lead.followup_date);
+    const dateStr = d.toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    lines.push(`🔔 *फॉलोअप तारीख:* ${dateStr}`);
+  }
+  if (lead.problem_description) lines.push(`📝 *समस्या:* ${lead.problem_description}`);
+  lines.push('', 'कृपया समय पर पहुँचें। धन्यवाद! 🙏');
+  return lines.join('\n');
+}
+
+export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospitalName = 'Hospital' }: LeadUpdateSheetProps) {
   const [mobile, setMobile] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
   const [followupDate, setFollowupDate] = useState('');
+  const [savedLead, setSavedLead] = useState<Lead | null>(null);
 
-  // Auto-fill form when lead changes
   useEffect(() => {
     if (lead && open) {
       setMobile(lead.mobile || '');
       setAppointmentDate(lead.appointment_date || '');
       setAppointmentTime(lead.appointment_time || '');
       setFollowupDate(lead.followup_date || '');
+      setSavedLead(null);
     }
   }, [lead, open]);
 
-  // Sync form when lead changes
-  const resetForm = () => {
-    if (lead) {
-      setMobile(lead.mobile || '');
-      setAppointmentDate(lead.appointment_date || '');
-      setAppointmentTime(lead.appointment_time || '');
-      setFollowupDate(lead.followup_date || '');
-    }
+  const handleWhatsApp = (l: Lead) => {
+    const phone = l.mobile?.replace(/\D/g, '') || '';
+    const whatsappPhone = phone.startsWith('91') ? phone : `91${phone}`;
+    const msg = buildWhatsAppMessage(l, hospitalName);
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleCall = (l: Lead) => {
+    const phone = l.mobile?.replace(/\D/g, '') || '';
+    window.open(`tel:${phone}`, '_self');
   };
 
   const handleSubmit = async () => {
@@ -65,7 +94,6 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
       return;
     }
 
-    // Send to n8n webhook
     try {
       await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/updatedr', {
         method: 'POST',
@@ -84,24 +112,70 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
       console.error('[CRM] Update webhook error:', err);
     }
 
+    const updatedLead: Lead = { ...lead, ...updates, mobile: mobile.trim(), appointment_date: appointmentDate, appointment_time: appointmentTime, followup_date: followupDate };
     onUpdate(lead.lead_id, updates);
     toast({ title: 'Updated!', description: `${lead.patient_name} updated successfully.` });
+    setSavedLead(updatedLead);
+  };
+
+  const handleClose = () => {
+    setSavedLead(null);
     onClose();
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); if (v && lead) { setMobile(lead.mobile || ''); setAppointmentDate(lead.appointment_date || ''); setAppointmentTime(lead.appointment_time || ''); setFollowupDate(lead.followup_date || ''); } }}>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-md bg-background border-border">
         <SheetHeader>
           <SheetTitle className="text-foreground flex items-center gap-2">
-            Update Lead
+            {savedLead ? 'Updated Successfully' : 'Update Lead'}
           </SheetTitle>
           <SheetDescription>
             {lead ? `${lead.patient_name} (ID: ${lead.lead_id})` : ''}
           </SheetDescription>
         </SheetHeader>
 
-        {lead && (
+        {savedLead ? (
+          /* Post-Save: Show patient details + WhatsApp */
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/30">
+              <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0" />
+              <p className="text-sm font-medium text-foreground">Patient details updated!</p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-2">
+              <p className="text-base font-semibold text-foreground">{savedLead.patient_name}</p>
+              <p className="text-sm text-muted-foreground">📞 {savedLead.mobile}</p>
+              {savedLead.department && <p className="text-sm text-muted-foreground">📋 {savedLead.department}</p>}
+              {savedLead.doctor_assigned && <p className="text-sm text-muted-foreground">👨‍⚕️ Dr. {savedLead.doctor_assigned}</p>}
+              {savedLead.appointment_date && (
+                <p className="text-sm text-muted-foreground">
+                  📅 Appointment: {new Date(savedLead.appointment_date).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {savedLead.appointment_time ? ` | ⏰ ${savedLead.appointment_time}` : ''}
+                </p>
+              )}
+              {savedLead.followup_date && (
+                <p className="text-sm text-muted-foreground">
+                  🔔 Followup: {new Date(savedLead.followup_date).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              )}
+              {savedLead.problem_description && <p className="text-sm text-muted-foreground">📝 {savedLead.problem_description}</p>}
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={() => handleWhatsApp(savedLead)} className="flex-1 gap-2 bg-[hsl(142,70%,35%)] hover:bg-[hsl(142,70%,30%)] text-white">
+                <MessageCircle className="h-4 w-4" /> WhatsApp भेजें
+              </Button>
+              <Button variant="outline" onClick={() => handleCall(savedLead)} className="gap-2">
+                <Phone className="h-4 w-4" /> Call
+              </Button>
+            </div>
+
+            <Button variant="outline" onClick={handleClose} className="w-full">
+              Close
+            </Button>
+          </div>
+        ) : lead && (
           <div className="mt-6 space-y-5">
             {/* Patient info (read-only) */}
             <div className="p-3 rounded-lg bg-muted/30 border border-border">
@@ -114,13 +188,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
               <Label className="text-foreground flex items-center gap-1.5">
                 <Phone className="h-3.5 w-3.5 text-primary" /> Mobile Number
               </Label>
-              <Input
-                value={mobile}
-                onChange={e => setMobile(e.target.value)}
-                placeholder="Enter mobile number"
-                className="bg-muted/50"
-                maxLength={15}
-              />
+              <Input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Enter mobile number" className="bg-muted/50" maxLength={15} />
             </div>
 
             {/* Appointment Date */}
@@ -128,12 +196,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
               <Label className="text-foreground flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-success" /> Appointment Date
               </Label>
-              <Input
-                type="date"
-                value={appointmentDate}
-                onChange={e => setAppointmentDate(e.target.value)}
-                className="bg-muted/50"
-              />
+              <Input type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} className="bg-muted/50" />
             </div>
 
             {/* Appointment Time */}
@@ -141,12 +204,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
               <Label className="text-foreground flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-success" /> Appointment Time
               </Label>
-              <Input
-                type="time"
-                value={appointmentTime}
-                onChange={e => setAppointmentTime(e.target.value)}
-                className="bg-muted/50"
-              />
+              <Input type="time" value={appointmentTime} onChange={e => setAppointmentTime(e.target.value)} className="bg-muted/50" />
             </div>
 
             {/* Followup Date */}
@@ -154,12 +212,7 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate }: LeadU
               <Label className="text-foreground flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-warning" /> Follow-up Date
               </Label>
-              <Input
-                type="date"
-                value={followupDate}
-                onChange={e => setFollowupDate(e.target.value)}
-                className="bg-muted/50"
-              />
+              <Input type="date" value={followupDate} onChange={e => setFollowupDate(e.target.value)} className="bg-muted/50" />
             </div>
 
             {/* Submit */}
