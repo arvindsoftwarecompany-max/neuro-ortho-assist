@@ -18,18 +18,18 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
         toast({ title: 'Login successful!' });
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email: email.trim(), password });
         if (error) throw error;
 
-        // Update profile with hospital info after signup
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from('profiles').update({
@@ -48,56 +48,65 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background bg-grid-pattern p-4">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background bg-grid-pattern p-4">
       <Card className="w-full max-w-md glass-card border-border/50">
-        <CardHeader className="text-center space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center glow-blue">
-            <Activity className="h-7 w-7 text-primary" />
+        <CardHeader className="text-center space-y-3 pb-4">
+          <div className="mx-auto w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center glow-blue">
+            <Activity className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl gradient-text">MedCRM Pro</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl gradient-text">MedCRM Pro</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {isLogin ? 'Apne account mein login karein' : 'Apne hospital ka naya account banayein'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="pt-0">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {!isLogin && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="hospitalName">Hospital Name</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="hospitalName" className="text-xs">Hospital Name</Label>
                   <Input
                     id="hospitalName"
                     placeholder="e.g. Ortho Neuro Hospital"
                     value={hospitalName}
                     onChange={e => setHospitalName(e.target.value)}
                     required={!isLogin}
+                    autoComplete="organization"
+                    className="h-10 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ownerName">Owner / Admin Name</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ownerName" className="text-xs">Owner / Admin Name</Label>
                   <Input
                     id="ownerName"
                     placeholder="e.g. Dr. Sharma"
                     value={ownerName}
                     onChange={e => setOwnerName(e.target.value)}
                     required={!isLogin}
+                    autoComplete="name"
+                    className="h-10 text-sm"
                   />
                 </div>
               </>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs">Email</Label>
               <Input
                 id="email"
                 type="email"
+                inputMode="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="h-11 text-base"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -106,16 +115,19 @@ export default function AuthPage() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={6}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                className="h-11 text-base"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11 text-sm font-semibold mt-2" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {isLogin ? 'Login' : 'Register'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-xs sm:text-sm text-muted-foreground">
             {isLogin ? 'Account nahi hai?' : 'Pehle se account hai?'}{' '}
             <button
+              type="button"
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary hover:underline font-medium"
             >
