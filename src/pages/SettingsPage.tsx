@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const [form, setForm] = useState({
     hospital_name: '',
@@ -26,7 +27,7 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !initialized) {
       setForm({
         hospital_name: profile.hospital_name || '',
         google_sheet_leads_url: profile.google_sheet_leads_url || '',
@@ -37,8 +38,9 @@ export default function SettingsPage() {
         webhook_opd_new_url: profile.webhook_opd_new_url || '',
         webhook_opd_update_url: profile.webhook_opd_update_url || '',
       });
+      setInitialized(true);
     }
-  }, [profile]);
+  }, [profile, initialized]);
 
   const handleSave = async () => {
     if (!user) return;
