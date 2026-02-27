@@ -100,6 +100,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_profiles_with_email: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          hospital_name: string
+          id: string
+          is_active: boolean
+          is_configured: boolean
+          owner_name: string
+          phone: string
+          trial_days: number
+          trial_start: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
