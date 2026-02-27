@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, CalendarCheck, Clock, XCircle, TrendingUp, Target, Bell, UserCheck,
-  Plus, RefreshCw, Bone, Brain, Pencil, CreditCard, Landmark, Banknote, Shield, Download, CalendarIcon
+  Plus, RefreshCw, Pencil, CreditCard, Landmark, Banknote, Shield, Download, CalendarIcon, Stethoscope
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -16,10 +16,11 @@ import { motion } from 'framer-motion';
 import { CallStatus, Department, Lead } from '@/types/leads';
 import { cn } from '@/lib/utils';
 import LeadUpdateSheet from '@/components/LeadUpdateSheet';
+import { DEPARTMENTS, getDeptConfig } from '@/config/departments';
 
 const COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#10B981', '#6B7280'];
 
-type DeptTab = 'All' | 'Orthopedics' | 'Neurology';
+type DeptTab = string;
 
 export default function Dashboard() {
   const { leads, stats, loading, lastUpdated, fetchData, updateLead } = useLeadsData();
@@ -58,6 +59,24 @@ export default function Dashboard() {
     };
   }, [filteredLeads]);
 
+  // Build dept data dynamically from actual leads
+  const deptData = useMemo(() => {
+    const deptCounts = new Map<string, number>();
+    leads.forEach(l => {
+      const dept = l.department || 'Other';
+      deptCounts.set(dept, (deptCounts.get(dept) || 0) + 1);
+    });
+    return Array.from(deptCounts.entries())
+      .map(([name, count]) => ({ name, count, ...getDeptConfig(name) }))
+      .sort((a, b) => b.count - a.count);
+  }, [leads]);
+
+  // Build dept tabs dynamically from data
+  const deptTabs: string[] = useMemo(() => {
+    const uniqueDepts = [...new Set(leads.map(l => l.department).filter(Boolean))].sort();
+    return ['All', ...uniqueDepts];
+  }, [leads]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -80,12 +99,6 @@ export default function Dashboard() {
     }))
     .filter(d => d.value > 0);
 
-  const deptData = [
-    { name: 'Orthopedics', count: leads.filter(l => l.department === 'Orthopedics').length, color: '#0D9488' },
-    { name: 'Neurology', count: leads.filter(l => l.department === 'Neurology').length, color: '#7C3AED' },
-    { name: 'Both', count: leads.filter(l => l.department === 'Both').length, color: '#2563EB' },
-  ];
-
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const dateStr = d.toISOString().split('T')[0];
@@ -100,8 +113,6 @@ export default function Dashboard() {
   const todayFollowups = filteredLeads.filter(l => l.followup_date === today).slice(0, 5);
   const todayAppointments = filteredLeads.filter(l => l.appointment_date === today).slice(0, 5);
   const overdueFollowups = filteredLeads.filter(l => l.followup_date && l.followup_date < today && l.call_status !== 'Converted' && l.call_status !== 'Lost').slice(0, 5);
-
-  const deptTabs: DeptTab[] = ['All', 'Orthopedics', 'Neurology'];
 
   return (
     <div className="space-y-6 pt-12 lg:pt-0">
@@ -124,23 +135,26 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Department Filter Tabs */}
-      <div className="flex gap-2">
-        {deptTabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              activeTab === tab
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            {tab === 'Orthopedics' && <Bone className="h-3.5 w-3.5 inline mr-1.5" />}
-            {tab === 'Neurology' && <Brain className="h-3.5 w-3.5 inline mr-1.5" />}
-            {tab} {tab === 'All' ? `(${leads.length})` : `(${leads.filter(l => l.department === tab).length})`}
-          </button>
-        ))}
+      <div className="flex gap-2 flex-wrap">
+        {deptTabs.map(tab => {
+          const config = tab !== 'All' ? getDeptConfig(tab) : null;
+          const TabIcon = config?.icon || Stethoscope;
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                activeTab === tab
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {tab !== 'All' && <TabIcon className="h-3.5 w-3.5 inline mr-1" />}
+              {tab} {tab === 'All' ? `(${leads.length})` : `(${leads.filter(l => l.department === tab).length})`}
+            </button>
+          );
+        })}
       </div>
 
       {/* Stats Row 1 */}
@@ -305,18 +319,22 @@ export default function Dashboard() {
       })()}
 
       {/* Department Breakdown (always from all leads) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {deptData.map(dept => (
-          <motion.div key={dept.name} className="glass-card-hover p-5 cursor-pointer" whileHover={{ scale: 1.02 }}
-            onClick={() => navigate(`/leads?department=${dept.name}`)}>
-            <div className="flex items-center gap-3 mb-3">
-              {dept.name === 'Orthopedics' ? <Bone className="h-5 w-5 text-accent" /> : <Brain className="h-5 w-5 text-secondary" />}
-              <h3 className="font-semibold text-foreground">{dept.name}</h3>
-            </div>
-            <p className="text-3xl font-bold font-mono-med text-foreground">{dept.count}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total patients</p>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {deptData.filter(d => d.count > 0).map(dept => {
+          const config = getDeptConfig(dept.name);
+          const DeptIcon = config.icon;
+          return (
+            <motion.div key={dept.name} className="glass-card-hover p-5 cursor-pointer" whileHover={{ scale: 1.02 }}
+              onClick={() => navigate(`/leads?department=${dept.name}`)}>
+              <div className="flex items-center gap-3 mb-3">
+                <DeptIcon className={cn("h-5 w-5", config.color)} />
+                <h3 className="font-semibold text-foreground text-sm">{dept.name}</h3>
+              </div>
+              <p className="text-3xl font-bold font-mono-med text-foreground">{dept.count}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total patients</p>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Charts Row */}

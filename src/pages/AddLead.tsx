@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DEPARTMENT_NAMES } from '@/config/departments';
 
 const STEPS = ['Basic Info', 'Address', 'Medical Info', 'Appointment', 'Additional'];
 
@@ -22,7 +23,7 @@ export default function AddLead() {
   const [form, setForm] = useState({
     patient_name: '', mobile: '', email: '', age: '', gender: 'Male',
     blood_group: '', address: '', city: '', state: '', pincode: '',
-    department: 'Orthopedics', sub_specialty: '', problem_description: '',
+    department: '', sub_specialty: '', problem_description: '',
     severity: 'Medium', call_status: 'New Lead', appointment_date: '',
     appointment_time: '', doctor_assigned: '', followup_date: '',
     source: 'Phone', priority: 'Normal', employee_name: '', remarks: '',
@@ -131,8 +132,8 @@ export default function AddLead() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><Label>Department *</Label>
               <Select value={form.department} onValueChange={v => set('department', v)}>
-                <SelectTrigger className="mt-1 bg-muted/50"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Orthopedics">Orthopedics</SelectItem><SelectItem value="Neurology">Neurology</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent>
+                <SelectTrigger className="mt-1 bg-muted/50"><SelectValue placeholder="Select Department" /></SelectTrigger>
+                <SelectContent>{DEPARTMENT_NAMES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Sub-Specialty</Label><Input value={form.sub_specialty} onChange={e => set('sub_specialty', e.target.value)} placeholder="e.g. Spine, Joint Replacement" className="mt-1 bg-muted/50" /></div>

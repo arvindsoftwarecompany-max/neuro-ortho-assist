@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, UserPlus, BarChart3, Calendar, Settings, 
-  Menu, X, Activity, Brain, Bone, Bell, LogOut
+  Menu, X, Activity, Bell, LogOut, Stethoscope
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -71,16 +71,12 @@ export default function AppSidebar() {
           </button>
         </div>
 
-        {/* Department indicators */}
+        {/* Hospital indicator */}
         {!collapsed && (
-          <div className="px-4 py-3 space-y-1.5">
+          <div className="px-4 py-3">
             <div className="flex items-center gap-2 text-[11px]">
-              <Bone className="h-3 w-3 text-ortho-teal" />
-              <span className="text-muted-foreground">Orthopedics</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px]">
-              <Brain className="h-3 w-3 text-neural-purple" />
-              <span className="text-muted-foreground">Neurology</span>
+              <Stethoscope className="h-3 w-3 text-primary" />
+              <span className="text-muted-foreground">Multispecialty Hospital</span>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 export type CallStatus = 'New Lead' | 'Contacted' | 'Appointment Booked' | 'Followup' | 'Not Interested' | 'Converted' | 'Lost';
-export type Department = 'Orthopedics' | 'Neurology' | 'Both';
+export type Department = string;
 export type Severity = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Priority = 'Normal' | 'High' | 'Urgent';
 export type Gender = 'Male' | 'Female' | 'Other';
