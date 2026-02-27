@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
 import {
-  Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard
+  Clock, Plus, RefreshCw, Download, CalendarIcon, Search, Phone, MapPin, Building2, Bell, X, Pencil, CreditCard, MessageCircle, CheckCircle2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -16,8 +16,12 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import StatCard from '@/components/StatCard';
 import { OpdReminder as OpdReminderType } from '@/types/opd';
+import OpdActionButtons, { getOpdWhatsAppUrl } from '@/components/OpdActionButtons';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OpdReminder() {
+  const { profile } = useAuth();
+  const hospitalName = profile?.hospital_name || 'Hospital';
   const { reminders, loading, lastUpdated, fetchData, addReminder, updateReminder } = useOpdData();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -128,7 +132,7 @@ export default function OpdReminder() {
   };
 
   const [updating, setUpdating] = useState(false);
-
+  const [savedReminder, setSavedReminder] = useState<OpdReminderType | null>(null);
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editReminder) return;
@@ -142,11 +146,15 @@ export default function OpdReminder() {
       });
       if (!res.ok) throw new Error('Webhook failed');
       updateReminder(editReminder.id, editForm);
+      const updated = { ...editReminder, ...editForm };
+      setSavedReminder(updated);
       setEditReminder(null);
       toast({ title: 'Success', description: 'OPD Reminder updated & synced!' });
     } catch (err) {
       console.error('[OPD] Webhook error:', err);
       updateReminder(editReminder.id, editForm);
+      const updated = { ...editReminder, ...editForm };
+      setSavedReminder(updated);
       setEditReminder(null);
       toast({ title: 'Warning', description: 'Updated locally but webhook sync failed.', variant: 'destructive' });
     } finally {
@@ -373,12 +381,8 @@ export default function OpdReminder() {
                   <p className="text-xs text-muted-foreground">{r.facility || 'No facility'} • {r.city || 'N/A'} • {r.time || 'No time'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a href={`tel:${r.mobile}`} className="inline-flex">
-                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 border-success/30 text-success hover:bg-success/10">
-                    <Phone className="h-3 w-3" /> Call
-                  </Button>
-                </a>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <OpdActionButtons reminder={r} hospitalName={hospitalName} />
                 <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => openEditSheet(r)}>
                   <Pencil className="h-3 w-3" /> Update
                 </Button>
@@ -410,12 +414,8 @@ export default function OpdReminder() {
                     <p className="text-xs text-destructive/80">Appointment थी: {r.next_visit} — नहीं आए</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <a href={`tel:${r.mobile}`} className="inline-flex">
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 border-success/30 text-success hover:bg-success/10">
-                      <Phone className="h-3 w-3" /> Call
-                    </Button>
-                  </a>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <OpdActionButtons reminder={r} hospitalName={hospitalName} />
                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => openEditSheet(r)}>
                     <Pencil className="h-3 w-3" /> Update
                   </Button>
@@ -520,11 +520,7 @@ export default function OpdReminder() {
                 <span className="text-muted-foreground">{r.reminder_1_day || '-'}</span>
                 <span className="text-muted-foreground">{r.time || '-'}</span>
                 <div className="flex items-center gap-1">
-                  <a href={`tel:${r.mobile}`}>
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 border-success/30 text-success hover:bg-success/10">
-                      <Phone className="h-3 w-3" /> Call
-                    </Button>
-                  </a>
+                  <OpdActionButtons reminder={r} hospitalName={hospitalName} />
                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => openEditSheet(r)}>
                     <Pencil className="h-3 w-3" /> Update
                   </Button>
@@ -539,6 +535,61 @@ export default function OpdReminder() {
       <div className="text-xs text-muted-foreground text-center">
         Showing {filteredReminders.length} of {reminders.length} reminders
       </div>
+
+      {/* Post-Update Success Sheet */}
+      <Sheet open={!!savedReminder} onOpenChange={(open) => !open && setSavedReminder(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-foreground flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" /> Updated Successfully
+            </SheetTitle>
+          </SheetHeader>
+          {savedReminder && (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/30">
+                <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0" />
+                <p className="text-sm font-medium text-foreground">Patient details updated!</p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-2">
+                <p className="text-base font-semibold text-foreground">{savedReminder.name}</p>
+                <p className="text-sm text-muted-foreground">📞 {savedReminder.mobile}</p>
+                {savedReminder.city && <p className="text-sm text-muted-foreground">🏙 {savedReminder.city}</p>}
+                {savedReminder.facility && <p className="text-sm text-muted-foreground">🏥 {savedReminder.facility}</p>}
+                {savedReminder.next_visit && (
+                  <p className="text-sm text-muted-foreground">
+                    📅 Next Visit: {(() => { try { return new Date(savedReminder.next_visit).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return savedReminder.next_visit; } })()}
+                    {savedReminder.time ? ` | ⏰ ${savedReminder.time}` : ''}
+                  </p>
+                )}
+                {savedReminder.reminder_1_day && (
+                  <p className="text-sm text-muted-foreground">
+                    🔔 Followup: {(() => { try { return new Date(savedReminder.reminder_1_day).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return savedReminder.reminder_1_day; } })()}
+                  </p>
+                )}
+                {savedReminder.payment_type && <p className="text-sm text-muted-foreground">💳 {savedReminder.payment_type}</p>}
+                {savedReminder.remark && <p className="text-sm text-muted-foreground">📝 {savedReminder.remark}</p>}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => window.open(getOpdWhatsAppUrl(savedReminder, hospitalName), '_blank')}
+                  className="flex-1 gap-2 bg-[hsl(142,70%,35%)] hover:bg-[hsl(142,70%,30%)] text-white"
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp भेजें
+                </Button>
+                <Button variant="outline" onClick={() => { const phone = savedReminder.mobile?.replace(/\D/g, '') || ''; window.open(`tel:${phone}`, '_self'); }} className="gap-2">
+                  <Phone className="h-4 w-4" /> Call
+                </Button>
+              </div>
+
+              <Button variant="outline" onClick={() => setSavedReminder(null)} className="w-full">
+                Close
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Update Sheet */}
       <Sheet open={!!editReminder} onOpenChange={(open) => !open && setEditReminder(null)}>
@@ -617,8 +668,8 @@ export default function OpdReminder() {
                 <option value="Private">Private</option>
               </select>
             </div>
-            <Button type="submit" className="w-full gap-2">
-              <Pencil className="h-3.5 w-3.5" /> Update Reminder
+            <Button type="submit" className="w-full gap-2" disabled={updating}>
+              <Pencil className="h-3.5 w-3.5" /> {updating ? 'Updating...' : 'Update Reminder'}
             </Button>
           </form>
         </SheetContent>
