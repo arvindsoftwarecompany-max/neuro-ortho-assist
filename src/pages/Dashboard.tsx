@@ -528,9 +528,8 @@ export default function Dashboard() {
             {recentLeads.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No leads found</p>
             ) : recentLeads.map(lead => (
-              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/patient/${lead.lead_id}`)}>
-                <div className="flex items-center gap-3">
+              <div key={lead.lead_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/patient/${lead.lead_id}`)}>
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
                     {lead.patient_name.charAt(0)}
                   </div>
@@ -539,13 +538,16 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{lead.department} • {lead.city}</p>
                   </div>
                 </div>
-                <StatusBadge status={lead.call_status} />
+                <div className="flex items-center gap-2">
+                  <LeadActionButtons lead={lead} hospitalName={profile?.hospital_name || 'Hospital'} />
+                  <StatusBadge status={lead.call_status} />
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <LeadUpdateSheet lead={editLead} open={!!editLead} onClose={() => setEditLead(null)} onUpdate={updateLead} />
+      <LeadUpdateSheet lead={editLead} open={!!editLead} onClose={() => setEditLead(null)} onUpdate={updateLead} hospitalName={profile?.hospital_name || 'Hospital'} />
     </div>
   );
 }
