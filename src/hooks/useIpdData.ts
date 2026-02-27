@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { IpdPatient, FollowUp, CallStatus } from '@/types/ipd';
 import { addDays, format, parseISO } from 'date-fns';
-
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1IkvEJ7e3UNckCW4Yxj29YafQlfYVWc9Kcttt46uTTbQ/export?format=csv';
+import { useAuth } from '@/contexts/AuthContext';
 const STORAGE_KEY = 'ipd_patients';
 const LOCAL_PATIENTS_KEY = 'ipd_patients_local';
 
@@ -91,6 +90,8 @@ function mapCSVToPatient(headers: string[], values: string[], index: number): Ip
 }
 
 export function useIpdData() {
+  const { profile } = useAuth();
+  const csvUrl = profile?.google_sheet_ipd_url || '';
   const [patients, setPatients] = useState<IpdPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,8 +110,14 @@ export function useIpdData() {
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (!csvUrl) {
+      setPatients(getLocalPatients());
+      setLoading(false);
+      setError('No Google Sheet URL configured');
+      return;
+    }
     try {
-      const res = await fetch(CSV_URL);
+      const res = await fetch(csvUrl);
       if (!res.ok) throw new Error('Failed to fetch');
       const text = await res.text();
       const lines = text.split('\n').filter(l => l.trim());
@@ -140,7 +147,7 @@ export function useIpdData() {
       setLoading(false);
       setLastUpdated(new Date());
     }
-  }, [getLocalPatients]);
+  }, [getLocalPatients, csvUrl]);
 
   useEffect(() => {
     fetchData();
