@@ -1,18 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Download, Phone, Eye, ChevronLeft, ChevronRight, ArrowUpDown, X, SearchX } from 'lucide-react';
+import { getDeptConfig } from '@/config/departments';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CallStatus, Department, Severity, Priority } from '@/types/leads';
+import { DEPARTMENT_NAMES } from '@/config/departments';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE_OPTIONS = [15, 30, 50, 100];
 const ALL_STATUSES: CallStatus[] = ['New Lead', 'Contacted', 'Appointment Booked', 'Followup', 'Not Interested', 'Converted', 'Lost'];
-const ALL_DEPARTMENTS: Department[] = ['Orthopedics', 'Neurology', 'Both'];
+const ALL_DEPARTMENTS: string[] = DEPARTMENT_NAMES;
 const ALL_SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
 const ALL_PRIORITIES: Priority[] = ['Normal', 'High', 'Urgent'];
 
@@ -337,9 +339,7 @@ export default function SearchLeads() {
                       <td className="px-3 py-3 text-muted-foreground">{lead.age || '-'}{lead.gender ? `/${lead.gender.charAt(0)}` : ''}</td>
                       <td className="px-3 py-3 text-muted-foreground">{lead.city || '-'}</td>
                       <td className="px-3 py-3">
-                        <span className={cn("text-xs font-medium",
-                          lead.department === 'Orthopedics' ? 'text-accent' : lead.department === 'Neurology' ? 'text-secondary' : 'text-primary'
-                        )}>{lead.department}</span>
+                        <span className={cn("text-xs font-medium", getDeptConfig(lead.department).color)}>{lead.department}</span>
                       </td>
                       <td className="px-3 py-3"><StatusBadge status={lead.call_status} /></td>
                       <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">

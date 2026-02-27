@@ -31,13 +31,38 @@ function parseDate(dateStr: string): string {
   return trimmed;
 }
 
-/** Normalize department: "ortho" → "Orthopedics", "neuro" → "Neurology" */
+/** Normalize department: match known departments or keep as-is */
 function normalizeDepartment(raw: string): Department {
   const val = raw.toLowerCase().trim();
-  if (val.startsWith('ortho')) return 'Orthopedics';
-  if (val.startsWith('neuro')) return 'Neurology';
-  if (val === 'both') return 'Both';
-  return 'Orthopedics'; // fallback
+  if (!val) return 'General Medicine';
+  const map: Record<string, string> = {
+    'ortho': 'Orthopedics', 'orthopedics': 'Orthopedics', 'orthopedic': 'Orthopedics',
+    'neuro': 'Neurology', 'neurology': 'Neurology',
+    'cardio': 'Cardiology', 'cardiology': 'Cardiology',
+    'general medicine': 'General Medicine', 'medicine': 'General Medicine',
+    'general surgery': 'General Surgery', 'surgery': 'General Surgery',
+    'pediatrics': 'Pediatrics', 'paediatrics': 'Pediatrics', 'pedia': 'Pediatrics',
+    'gynecology': 'Gynecology', 'gynaecology': 'Gynecology', 'gynae': 'Gynecology', 'obgyn': 'Gynecology',
+    'ent': 'ENT',
+    'ophthalmology': 'Ophthalmology', 'eye': 'Ophthalmology',
+    'dermatology': 'Dermatology', 'skin': 'Dermatology',
+    'urology': 'Urology',
+    'gastroenterology': 'Gastroenterology', 'gastro': 'Gastroenterology',
+    'pulmonology': 'Pulmonology', 'pulmo': 'Pulmonology', 'chest': 'Pulmonology',
+    'nephrology': 'Nephrology',
+    'oncology': 'Oncology',
+    'psychiatry': 'Psychiatry', 'mental health': 'Psychiatry',
+    'dental': 'Dental', 'dentistry': 'Dental',
+    'physiotherapy': 'Physiotherapy', 'physio': 'Physiotherapy',
+    'both': 'General Medicine',
+  };
+  // Try exact match first, then startsWith
+  if (map[val]) return map[val];
+  for (const [key, dept] of Object.entries(map)) {
+    if (val.startsWith(key)) return dept;
+  }
+  // Capitalize first letter of each word as fallback
+  return raw.trim().replace(/\b\w/g, c => c.toUpperCase()) || 'Other';
 }
 
 /** Normalize call status: handle common variations */
