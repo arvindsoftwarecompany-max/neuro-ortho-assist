@@ -31,7 +31,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="glass-card p-5 text-center">
-        <p className="text-xs text-muted-foreground">Ortho Neuro Hospital CRM v1.0</p>
+        <p className="text-xs text-muted-foreground">MedCRM Pro v1.0</p>
         <p className="text-xs text-muted-foreground mt-1">Connect to Lovable Cloud for full backend support</p>
       </div>
     </div>
