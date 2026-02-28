@@ -13,6 +13,7 @@ interface LeadUpdateSheetProps {
   onClose: () => void;
   onUpdate: (id: number, data: Partial<Lead>) => void;
   hospitalName?: string;
+  webhookUpdateUrl?: string;
 }
 
 function buildWhatsAppMessage(lead: Lead, hospitalName: string): string {
@@ -40,7 +41,7 @@ function buildWhatsAppMessage(lead: Lead, hospitalName: string): string {
   return lines.join('\n');
 }
 
-export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospitalName = 'Hospital' }: LeadUpdateSheetProps) {
+export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospitalName = 'Hospital', webhookUpdateUrl }: LeadUpdateSheetProps) {
   const [mobile, setMobile] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
@@ -94,22 +95,24 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospita
       return;
     }
 
-    try {
-      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/updatedr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: lead.lead_id,
-          patient_name: lead.patient_name,
-          mobile: mobile.trim(),
-          appointment_date: appointmentDate,
-          appointment_time: appointmentTime,
-          followup_date: followupDate,
-          ...updates,
-        }),
-      });
-    } catch (err) {
-      console.error('[CRM] Update webhook error:', err);
+    if (webhookUpdateUrl) {
+      try {
+        await fetch(webhookUpdateUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead_id: lead.lead_id,
+            patient_name: lead.patient_name,
+            mobile: mobile.trim(),
+            appointment_date: appointmentDate,
+            appointment_time: appointmentTime,
+            followup_date: followupDate,
+            ...updates,
+          }),
+        });
+      } catch (err) {
+        console.error('[CRM] Update webhook error:', err);
+      }
     }
 
     const updatedLead: Lead = { ...lead, ...updates, mobile: mobile.trim(), appointment_date: appointmentDate, appointment_time: appointmentTime, followup_date: followupDate };

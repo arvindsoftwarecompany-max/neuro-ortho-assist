@@ -547,7 +547,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      <LeadUpdateSheet lead={editLead} open={!!editLead} onClose={() => setEditLead(null)} onUpdate={updateLead} hospitalName={profile?.hospital_name || 'Hospital'} />
+      <LeadUpdateSheet lead={editLead} open={!!editLead} onClose={() => setEditLead(null)} onUpdate={updateLead} hospitalName={profile?.hospital_name || 'Hospital'} webhookUpdateUrl={profile?.webhook_update_url} />
     </div>
   );
 }

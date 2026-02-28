@@ -113,14 +113,17 @@ export default function OpdReminder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     addReminder(formData);
-    try {
-      await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/newlook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-    } catch (err) {
-      console.error('Webhook failed:', err);
+    const webhookNewUrl = profile?.webhook_opd_new_url;
+    if (webhookNewUrl) {
+      try {
+        await fetch(webhookNewUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      } catch (err) {
+        console.error('Webhook failed:', err);
+      }
     }
     setFormData({ name: '', mobile: '', city: '', next_visit: '', remark: '', facility: '', reminder_1_day: '', time: '', payment_type: '' });
     setShowForm(false);
@@ -139,12 +142,15 @@ export default function OpdReminder() {
     setUpdating(true);
     try {
       const payload = { ...editForm, id: editReminder.id };
-      const res = await fetch('https://n8n.srv1237080.hstgr.cloud/webhook/opd123', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Webhook failed');
+      const webhookUpdateUrl = profile?.webhook_opd_update_url;
+      if (webhookUpdateUrl) {
+        const res = await fetch(webhookUpdateUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Webhook failed');
+      }
       updateReminder(editReminder.id, editForm);
       const updated = { ...editReminder, ...editForm };
       setSavedReminder(updated);
