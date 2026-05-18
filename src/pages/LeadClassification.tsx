@@ -10,6 +10,7 @@ import { Lead } from '@/types/leads';
 import LeadActionButtons from '@/components/LeadActionButtons';
 import LeadUpdateSheet from '@/components/LeadUpdateSheet';
 import ChatHistoryDialog from '@/components/ChatHistoryDialog';
+import { useChatData } from '@/hooks/useChatData';
 import { cn } from '@/lib/utils';
 
 type Temperature = 'hot' | 'warm' | 'cold';
