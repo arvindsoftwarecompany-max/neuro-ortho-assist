@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles, Bell, Phone, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lead } from '@/types/leads';
-import LeadActionButtons from '@/components/LeadActionButtons';
 import ChatHistoryDialog from '@/components/ChatHistoryDialog';
+import LeadUpdateSheet from '@/components/LeadUpdateSheet';
 import { useChatData, ChatMessage } from '@/hooks/useChatData';
+import { useLeadsData } from '@/hooks/useLeadsData';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +27,7 @@ interface ChatLead {
   patient_name: string;
   messages: ChatMessage[];
   lastTimestamp: string;
-  lastMessage: string;
+  firstTimestamp: string;
 }
 
 function normalizeMobile(m: string): string {
@@ -34,47 +35,50 @@ function normalizeMobile(m: string): string {
   return digits.length > 10 ? digits.slice(-10) : digits;
 }
 
-function toLeadShape(cl: ChatLead): Lead {
+function fmtDate(s: string): string {
+  if (!s) return '-';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function toLeadShape(cl: ChatLead, existing?: Lead): Lead {
+  if (existing) return { ...existing, mobile: cl.mobile, patient_name: cl.patient_name };
   return {
     lead_id: 0,
-    date_created: cl.lastTimestamp,
+    date_created: cl.firstTimestamp,
     patient_name: cl.patient_name,
     mobile: cl.mobile,
-    email: '',
-    age: 0,
-    gender: 'Other',
-    blood_group: '',
-    city: '', state: '', pincode: '', address: '',
+    email: '', age: 0, gender: 'Other',
+    blood_group: '', city: '', state: '', pincode: '', address: '',
     department: '', sub_specialty: '',
     problem_description: '',
-    severity: 'Low',
-    call_status: 'New Lead',
+    severity: 'Low', call_status: 'New Lead',
     followup_date: '', appointment_date: '', appointment_time: '',
     doctor_assigned: '', employee_name: '',
     source: 'WhatsApp' as any,
-    remarks: '',
-    priority: 'Normal',
+    remarks: '', priority: 'Normal',
     last_contact_date: cl.lastTimestamp,
   };
 }
 
-const tempConfig: Record<Temperature, { label: string; icon: any; color: string; bg: string; border: string }> = {
-  hot:  { label: 'Hot Lead',  icon: Flame,       color: 'text-red-500',    bg: 'bg-red-500/10',    border: 'border-red-500/30' },
-  warm: { label: 'Warm Lead', icon: Thermometer, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
-  cold: { label: 'Cold Lead', icon: Snowflake,   color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30' },
+const tempBadge: Record<Temperature, { label: string; icon: any; className: string }> = {
+  hot:  { label: 'HOT',  icon: Flame,       className: 'bg-red-500/15 text-red-500 border-red-500/40' },
+  warm: { label: 'WARM', icon: Thermometer, className: 'bg-orange-500/15 text-orange-500 border-orange-500/40' },
+  cold: { label: 'COLD', icon: Snowflake,   className: 'bg-blue-500/15 text-blue-400 border-blue-500/40' },
 };
 
 export default function LeadClassification() {
   const { profile } = useAuth();
+  const { leads, updateLead } = useLeadsData();
   const { messages: allChats, loading: chatLoading, error: chatError, configured: chatConfigured, fetchData } = useChatData();
-  const [tab, setTab] = useState<Temperature>('hot');
   const [chatLead, setChatLead] = useState<Lead | null>(null);
+  const [updateLeadState, setUpdateLeadState] = useState<Lead | null>(null);
+  const [filter, setFilter] = useState<'all' | Temperature>('all');
   const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
   const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const analyzedKeysRef = useRef<Set<string>>(new Set());
 
-  // Group chat messages by mobile → ChatLead list
   const chatLeads = useMemo<ChatLead[]>(() => {
     const map = new Map<string, ChatMessage[]>();
     allChats.forEach((m) => {
@@ -85,21 +89,20 @@ export default function LeadClassification() {
     });
     const list: ChatLead[] = [];
     map.forEach((msgs, mobile) => {
+      const first = msgs[0];
       const last = msgs[msgs.length - 1];
       list.push({
         mobile,
-        patient_name: msgs.find((m) => m.patient_name)?.patient_name || last?.patient_name || 'Unknown',
+        patient_name: msgs.find((m) => m.patient_name)?.patient_name || 'Unknown',
         messages: msgs,
+        firstTimestamp: first?.timestamp || '',
         lastTimestamp: last?.timestamp || '',
-        lastMessage: last?.message || '',
       });
     });
-    // Sort by last timestamp desc (string compare fine if ISO; else fallback)
     list.sort((a, b) => (b.lastTimestamp || '').localeCompare(a.lastTimestamp || ''));
     return list;
   }, [allChats]);
 
-  // Auto-analyze every chat lead (cached by mobile + message count)
   useEffect(() => {
     chatLeads.forEach(async (cl) => {
       const key = `${cl.mobile}::${cl.messages.length}`;
@@ -109,19 +112,15 @@ export default function LeadClassification() {
       try {
         const { data, error } = await supabase.functions.invoke('classify-chat-lead', {
           body: {
-            patient_name: cl.patient_name,
-            mobile: cl.mobile,
-            messages: cl.messages.map((m) => ({
-              timestamp: m.timestamp, sender: m.sender, message: m.message,
-            })),
+            patient_name: cl.patient_name, mobile: cl.mobile,
+            messages: cl.messages.map((m) => ({ timestamp: m.timestamp, sender: m.sender, message: m.message })),
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         setAnalyses((s) => ({ ...s, [cl.mobile]: data as Classification }));
-        setErrors((s) => { const n = { ...s }; delete n[cl.mobile]; return n; });
-      } catch (e: any) {
-        setErrors((s) => ({ ...s, [cl.mobile]: e?.message || 'AI analysis failed' }));
+      } catch (e) {
+        // silent — row will show pending
       } finally {
         setAnalyzing((s) => ({ ...s, [cl.mobile]: false }));
       }
@@ -131,188 +130,177 @@ export default function LeadClassification() {
   const reanalyze = () => {
     analyzedKeysRef.current.clear();
     setAnalyses({});
-    setErrors({});
     fetchData();
   };
 
-  const classified = useMemo(() => {
-    const buckets: Record<Temperature | 'pending', ChatLead[]> = { hot: [], warm: [], cold: [], pending: [] };
+  const findExistingLead = (mobile: string): Lead | undefined => {
+    const target = normalizeMobile(mobile);
+    return leads.find((l) => normalizeMobile(l.mobile) === target);
+  };
+
+  const filteredLeads = useMemo(() => {
+    if (filter === 'all') return chatLeads;
+    return chatLeads.filter((cl) => analyses[cl.mobile]?.temperature === filter);
+  }, [chatLeads, analyses, filter]);
+
+  const counts = useMemo(() => {
+    const c = { hot: 0, warm: 0, cold: 0, pending: 0 };
     chatLeads.forEach((cl) => {
       const a = analyses[cl.mobile];
-      if (a) buckets[a.temperature].push(cl);
-      else buckets.pending.push(cl);
+      if (a) c[a.temperature]++;
+      else c.pending++;
     });
-    return buckets;
+    return c;
   }, [chatLeads, analyses]);
 
+  const handleCall = (mobile: string) => window.open(`tel:${mobile.replace(/\D/g, '')}`, '_self');
+  const handleWhatsApp = (cl: ChatLead) => {
+    const phone = cl.mobile.replace(/\D/g, '');
+    const wa = phone.startsWith('91') ? phone : `91${phone}`;
+    const a = analyses[cl.mobile];
+    const msg = `नमस्ते ${cl.patient_name} जी,\n\n${profile?.hospital_name || 'Hospital'} से बात कर रहे हैं।${a ? `\n\n${a.nextAction}` : ''}\n\nधन्यवाद! 🙏`;
+    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   return (
-    <div className="space-y-6 pt-12 lg:pt-0">
+    <div className="space-y-4 pt-12 lg:pt-0">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            Lead Classification
+            <Sparkles className="h-6 w-6 text-primary" /> Lead Classification
           </h1>
           <p className="text-sm text-muted-foreground">
-            Google Chat Sheet se patients ko AI khud Hot / Warm / Cold classify karta hai
+            Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>
-          <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} />
-          Re-analyze
+          <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} /> Re-analyze
         </Button>
       </motion.div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(['all', 'hot', 'warm', 'cold'] as const).map((f) => {
+          const count = f === 'all' ? chatLeads.length : counts[f as Temperature];
+          const label = f === 'all' ? 'All' : tempBadge[f as Temperature].label;
+          return (
+            <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)} className="h-8">
+              {label} <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{count}</Badge>
+            </Button>
+          );
+        })}
+        {counts.pending > 0 && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
+            <Loader2 className="h-3 w-3 animate-spin" /> {counts.pending} AI analyze ho rahe hain…
+          </span>
+        )}
+      </div>
 
       <div className="glass-card p-3 text-xs">
         {!chatConfigured && <span className="text-warning">⚠️ Settings me Google Chat Sheet URL configure karein.</span>}
         {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Chat data load ho raha hai…</span>}
         {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
         {chatConfigured && !chatLoading && !chatError && (
-          <span className="text-primary">
-            💬 {allChats.length} messages • {chatLeads.length} unique patients •{' '}
-            {Object.keys(analyses).length}/{chatLeads.length} AI-classified
-            {classified.pending.length > 0 && ` • ${classified.pending.length} pending`}
-          </span>
+          <span className="text-primary">💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified</span>
         )}
       </div>
 
       {chatLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : chatLeads.length === 0 && chatConfigured ? (
-        <div className="glass-card p-8 text-center text-sm text-muted-foreground">
-          Google Chat Sheet me koi data nahi mila.
-        </div>
+        <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : chatLeads.length === 0 ? (
+        <div className="glass-card p-8 text-center text-sm text-muted-foreground">Google Chat Sheet me koi data nahi mila.</div>
       ) : (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Temperature)}>
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
-            {(['hot', 'warm', 'cold'] as Temperature[]).map((t) => {
-              const C = tempConfig[t];
-              const Icon = C.icon;
-              return (
-                <TabsTrigger key={t} value={t} className="flex items-center gap-1.5">
-                  <Icon className={cn('h-4 w-4', C.color)} />
-                  <span className="hidden sm:inline">{C.label}</span>
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                    {classified[t].length}
-                  </Badge>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-
-          {(['hot', 'warm', 'cold'] as Temperature[]).map((t) => {
-            const C = tempConfig[t];
-            const Icon = C.icon;
-            const list = classified[t];
-            return (
-              <TabsContent key={t} value={t} className="mt-4 space-y-3">
-                {list.length === 0 ? (
-                  <div className="glass-card p-8 text-center text-sm text-muted-foreground">
-                    Koi {C.label.toLowerCase()} nahi hai.
-                    {classified.pending.length > 0 && ` ${classified.pending.length} patients abhi analyze ho rahe hain…`}
-                  </div>
-                ) : (
-                  list.map((cl) => {
-                    const a = analyses[cl.mobile];
-                    const leadShape = toLeadShape(cl);
-                    return (
-                      <motion.div
-                        key={cl.mobile}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={cn('glass-card p-4 border-l-4', C.border)}
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={cn('p-2 rounded-lg', C.bg)}>
-                              <Icon className={cn('h-4 w-4', C.color)} />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-foreground">{cl.patient_name}</h3>
-                              <p className="text-xs text-muted-foreground">
-                                {cl.mobile} • {cl.messages.length} messages • last: {cl.lastTimestamp}
-                              </p>
-                            </div>
+        <div className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Mobile</TableHead>
+                  <TableHead className="whitespace-nowrap">AI Status</TableHead>
+                  <TableHead className="min-w-[220px]">Patient ki Zaroorat (Kya chahiye)</TableHead>
+                  <TableHead className="min-w-[220px]">Aage Kya Karna Hai</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map((cl) => {
+                  const a = analyses[cl.mobile];
+                  const isAnalyzing = analyzing[cl.mobile];
+                  const T = a ? tempBadge[a.temperature] : null;
+                  const Icon = T?.icon;
+                  const existing = findExistingLead(cl.mobile);
+                  const leadShape = toLeadShape(cl, existing);
+                  return (
+                    <TableRow key={cl.mobile} className="hover:bg-muted/20">
+                      <TableCell className="text-xs whitespace-nowrap">{fmtDate(cl.firstTimestamp)}</TableCell>
+                      <TableCell className="font-medium text-sm">{cl.patient_name}</TableCell>
+                      <TableCell className="text-xs font-mono">{cl.mobile}</TableCell>
+                      <TableCell>
+                        {a && T && Icon ? (
+                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-semibold', T.className)}>
+                            <Icon className="h-3 w-3" /> {T.label}
+                          </span>
+                        ) : isAnalyzing ? (
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> AI…</span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">Pending</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-foreground/90">
+                        {a ? (
+                          <div className="space-y-1">
+                            <p>{a.summary}</p>
+                            <p className="text-muted-foreground italic">{a.reason}</p>
                           </div>
-                          <LeadActionButtons lead={leadShape} hospitalName={profile?.hospital_name || 'Hospital'} />
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-xs text-foreground/90">
+                        {a ? a.nextAction : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)}>
+                            <Phone className="h-3.5 w-3.5 text-success" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="WhatsApp" onClick={() => handleWhatsApp(cl)}>
+                            <MessageCircle className="h-3.5 w-3.5 text-[hsl(142,70%,40%)]" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 px-2 gap-1" title="Chat dekhein" onClick={() => setChatLead(leadShape)}>
+                            <MessageSquareText className="h-3.5 w-3.5" />
+                            <span className="text-[11px]">{cl.messages.length}</span>
+                          </Button>
+                          <Button size="sm" className="h-7 px-2 gap-1" title="Follow-up form" onClick={() => setUpdateLeadState(leadShape)}>
+                            <Bell className="h-3.5 w-3.5" />
+                            <span className="text-[11px] hidden sm:inline">Follow-up</span>
+                          </Button>
                         </div>
-
-                        {a && (
-                          <div className="space-y-2 mb-3">
-                            <div className={cn('p-2.5 rounded-md text-xs', C.bg)}>
-                              <p className={cn('font-medium mb-1 flex items-center gap-1', C.color)}>
-                                <Sparkles className="h-3 w-3" />
-                                Kyu {C.label} hai? (AI)
-                              </p>
-                              <p className="text-foreground/90">{a.reason}</p>
-                            </div>
-                            <div className="p-2.5 rounded-md bg-primary/5 border border-primary/20 text-xs">
-                              <p className="font-medium text-primary mb-1">Aage kya karna hai?</p>
-                              <p className="text-foreground/90">{a.nextAction}</p>
-                            </div>
-                            {a.summary && (
-                              <div className="p-2.5 rounded-md bg-muted/30 text-xs">
-                                <p className="font-medium text-muted-foreground mb-1">Chat Summary</p>
-                                <p className="text-foreground/90">{a.summary}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {cl.messages.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setChatLead(leadShape)}
-                            className="w-full text-left p-2.5 rounded-md bg-muted/30 border border-border/50 hover:border-primary/40 transition-colors mb-3"
-                          >
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
-                              <span className="flex items-center gap-1">
-                                <MessageSquareText className="h-3 w-3" />
-                                Latest message • {cl.messages[cl.messages.length - 1].sender || 'Staff'}
-                              </span>
-                              <span>{cl.lastTimestamp}</span>
-                            </div>
-                            <p className="text-xs text-foreground/90 line-clamp-2">{cl.lastMessage}</p>
-                            <p className="text-[10px] text-primary mt-1">
-                              Puri baat-cheet dekhne ke liye click karein →
-                            </p>
-                          </button>
-                        )}
-
-                        <Button size="sm" variant="outline" className="h-8" onClick={() => setChatLead(leadShape)}>
-                          <MessageSquareText className="h-3.5 w-3.5" />
-                          Baat-cheet ({cl.messages.length})
-                        </Button>
-                      </motion.div>
-                    );
-                  })
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredLeads.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                      Is filter me koi lead nahi hai.
+                    </TableCell>
+                  </TableRow>
                 )}
-              </TabsContent>
-            );
-          })}
-
-          {classified.pending.length > 0 && (
-            <div className="mt-4 glass-card p-3 text-xs">
-              <p className="font-medium text-muted-foreground mb-2">
-                ⏳ AI analyze kar raha hai ({classified.pending.length}):
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {classified.pending.slice(0, 10).map((cl) => (
-                  <span key={cl.mobile} className="px-2 py-1 rounded bg-muted/40 flex items-center gap-1">
-                    {analyzing[cl.mobile] && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {cl.patient_name}
-                    {errors[cl.mobile] && <span className="text-destructive">!</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </Tabs>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
 
       <ChatHistoryDialog lead={chatLead} open={!!chatLead} onClose={() => setChatLead(null)} />
+      <LeadUpdateSheet
+        lead={updateLeadState}
+        open={!!updateLeadState}
+        onClose={() => setUpdateLeadState(null)}
+        onUpdate={updateLead}
+        hospitalName={profile?.hospital_name}
+        webhookUpdateUrl={profile?.webhook_update_url}
+      />
     </div>
   );
 }

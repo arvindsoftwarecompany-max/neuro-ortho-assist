@@ -52,18 +52,29 @@ export function useChatData() {
         const idx = headers.findIndex(h => h === name.toLowerCase().replace(/[_\s]/g, ''));
         return idx >= 0 ? (values[idx] || '').trim() : '';
       };
-      const parsed: ChatMessage[] = lines.slice(1).map(line => {
+      const parsed: ChatMessage[] = [];
+      lines.slice(1).forEach(line => {
         const values = parseCSVRow(line);
         const raw: Record<string, string> = {};
         headers.forEach((h, i) => { raw[h] = values[i] || ''; });
-        return {
-          timestamp: get(values, 'timestamp') || get(values, 'date') || get(values, 'time') || '',
-          mobile: get(values, 'mobile') || get(values, 'phone') || get(values, 'mobileno') || '',
-          patient_name: get(values, 'patientname') || get(values, 'name') || '',
-          sender: get(values, 'sender') || get(values, 'from') || get(values, 'by') || 'Staff',
-          message: get(values, 'message') || get(values, 'chat') || get(values, 'note') || get(values, 'remarks') || '',
-          raw,
-        };
+        const timestamp = get(values, 'timestamp') || get(values, 'date') || get(values, 'time') || '';
+        const mobile = get(values, 'mobile') || get(values, 'phone') || get(values, 'mobileno') || '';
+        const patient_name = get(values, 'patientname') || get(values, 'name') || '';
+        const question = get(values, 'question') || get(values, 'query') || get(values, 'patientmessage') || '';
+        const reply = get(values, 'reply') || get(values, 'response') || get(values, 'answer') || '';
+        const single = get(values, 'message') || get(values, 'chat') || get(values, 'note') || get(values, 'remarks') || '';
+
+        if (question || reply) {
+          if (question) parsed.push({ timestamp, mobile, patient_name, sender: 'Patient', message: question, raw });
+          if (reply) parsed.push({ timestamp, mobile, patient_name, sender: 'Staff', message: reply, raw });
+        } else {
+          parsed.push({
+            timestamp, mobile, patient_name,
+            sender: get(values, 'sender') || get(values, 'from') || get(values, 'by') || 'Staff',
+            message: single,
+            raw,
+          });
+        }
       });
       setMessages(parsed);
       setError(null);
