@@ -83,6 +83,13 @@ export default function LeadClassification() {
         <p className="text-sm text-muted-foreground">Leads ko Hot / Warm / Cold me dekhein aur action lein</p>
       </motion.div>
 
+      <div className="glass-card p-3 text-xs">
+        {!chatConfigured && <span className="text-warning">⚠️ Settings me Google Chat Sheet URL configure karein taaki baat-cheet yaha dikh sake.</span>}
+        {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Baat-cheet data load ho raha hai…</span>}
+        {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ Chat load nahi hua: {chatError}</span>}
+        {chatConfigured && !chatLoading && !chatError && <span className="text-primary">💬 {allChats.length} baat-cheet records loaded — har lead par latest message dikh raha hai</span>}
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
