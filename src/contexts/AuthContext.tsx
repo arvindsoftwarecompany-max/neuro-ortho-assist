@@ -9,6 +9,7 @@ interface Profile {
   google_sheet_leads_url: string;
   google_sheet_opd_url: string;
   google_sheet_ipd_url: string;
+  google_sheet_chat_url: string;
   webhook_lead_url: string;
   webhook_update_url: string;
   webhook_opd_new_url: string;

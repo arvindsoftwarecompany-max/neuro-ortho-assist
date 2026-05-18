@@ -19,6 +19,7 @@ export default function ConfigPage() {
     google_sheet_leads_url: '',
     google_sheet_opd_url: '',
     google_sheet_ipd_url: '',
+    google_sheet_chat_url: '',
     webhook_lead_url: '',
     webhook_update_url: '',
     webhook_opd_new_url: '',
@@ -32,6 +33,7 @@ export default function ConfigPage() {
         google_sheet_leads_url: profile.google_sheet_leads_url || '',
         google_sheet_opd_url: profile.google_sheet_opd_url || '',
         google_sheet_ipd_url: profile.google_sheet_ipd_url || '',
+        google_sheet_chat_url: (profile as any).google_sheet_chat_url || '',
         webhook_lead_url: profile.webhook_lead_url || '',
         webhook_update_url: profile.webhook_update_url || '',
         webhook_opd_new_url: profile.webhook_opd_new_url || '',
@@ -98,6 +100,10 @@ export default function ConfigPage() {
             <div className="space-y-2">
               <Label>IPD Follow-up Google Sheet URL</Label>
               <Input value={form.google_sheet_ipd_url} onChange={e => update('google_sheet_ipd_url', e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" />
+            </div>
+            <div className="space-y-2">
+              <Label>Google Chat Sheet URL (Patient baat-cheet history)</Label>
+              <Input value={form.google_sheet_chat_url} onChange={e => update('google_sheet_chat_url', e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" />
             </div>
           </CardContent>
         </Card>

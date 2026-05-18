@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS google_sheet_chat_url text NOT NULL DEFAULT '';
