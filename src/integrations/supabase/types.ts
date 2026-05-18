@@ -17,6 +17,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          google_sheet_chat_url: string
           google_sheet_ipd_url: string
           google_sheet_leads_url: string
           google_sheet_opd_url: string
@@ -37,6 +38,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          google_sheet_chat_url?: string
           google_sheet_ipd_url?: string
           google_sheet_leads_url?: string
           google_sheet_opd_url?: string
@@ -57,6 +59,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          google_sheet_chat_url?: string
           google_sheet_ipd_url?: string
           google_sheet_leads_url?: string
           google_sheet_opd_url?: string
