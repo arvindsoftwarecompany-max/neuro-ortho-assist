@@ -65,6 +65,7 @@ const tempConfig: Record<Temperature, { label: string; icon: any; color: string;
 export default function LeadClassification() {
   const { leads, loading, updateLead } = useLeadsData();
   const { profile } = useAuth();
+  const { getMessagesForMobile, configured: chatConfigured, loading: chatLoading, error: chatError, messages: allChats } = useChatData();
   const [tab, setTab] = useState<Temperature>('hot');
   const [chatLead, setChatLead] = useState<Lead | null>(null);
   const [updateLeadState, setUpdateLeadState] = useState<Lead | null>(null);
