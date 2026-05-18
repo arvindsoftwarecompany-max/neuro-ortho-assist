@@ -10,6 +10,7 @@ import { Lead } from '@/types/leads';
 import LeadActionButtons from '@/components/LeadActionButtons';
 import LeadUpdateSheet from '@/components/LeadUpdateSheet';
 import ChatHistoryDialog from '@/components/ChatHistoryDialog';
+import { useChatData } from '@/hooks/useChatData';
 import { cn } from '@/lib/utils';
 
 type Temperature = 'hot' | 'warm' | 'cold';
@@ -64,6 +65,7 @@ const tempConfig: Record<Temperature, { label: string; icon: any; color: string;
 export default function LeadClassification() {
   const { leads, loading, updateLead } = useLeadsData();
   const { profile } = useAuth();
+  const { getMessagesForMobile, configured: chatConfigured, loading: chatLoading, error: chatError, messages: allChats } = useChatData();
   const [tab, setTab] = useState<Temperature>('hot');
   const [chatLead, setChatLead] = useState<Lead | null>(null);
   const [updateLeadState, setUpdateLeadState] = useState<Lead | null>(null);
@@ -80,6 +82,13 @@ export default function LeadClassification() {
         <h1 className="text-2xl font-bold text-foreground">Lead Classification</h1>
         <p className="text-sm text-muted-foreground">Leads ko Hot / Warm / Cold me dekhein aur action lein</p>
       </motion.div>
+
+      <div className="glass-card p-3 text-xs">
+        {!chatConfigured && <span className="text-warning">⚠️ Settings me Google Chat Sheet URL configure karein taaki baat-cheet yaha dikh sake.</span>}
+        {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Baat-cheet data load ho raha hai…</span>}
+        {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ Chat load nahi hua: {chatError}</span>}
+        {chatConfigured && !chatLoading && !chatError && <span className="text-primary">💬 {allChats.length} baat-cheet records loaded — har lead par latest message dikh raha hai</span>}
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -144,10 +153,35 @@ export default function LeadClassification() {
                         </div>
                       </div>
 
+                      {(() => {
+                        const chats = getMessagesForMobile(lead.mobile);
+                        const last = chats[chats.length - 1];
+                        if (!chats.length) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setChatLead(lead)}
+                            className="w-full text-left p-2.5 rounded-md bg-muted/30 border border-border/50 hover:border-primary/40 transition-colors mb-3"
+                          >
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                              <span className="flex items-center gap-1">
+                                <MessageSquareText className="h-3 w-3" />
+                                Latest baat-cheet • {last.sender || 'Staff'}
+                              </span>
+                              <span>{last.timestamp}</span>
+                            </div>
+                            <p className="text-xs text-foreground/90 line-clamp-2">{last.message}</p>
+                            {chats.length > 1 && (
+                              <p className="text-[10px] text-primary mt-1">+{chats.length - 1} aur messages — dekhne ke liye click karein</p>
+                            )}
+                          </button>
+                        );
+                      })()}
+
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" className="h-8" onClick={() => setChatLead(lead)}>
                           <MessageSquareText className="h-3.5 w-3.5" />
-                          Baat-cheet
+                          Baat-cheet ({getMessagesForMobile(lead.mobile).length})
                         </Button>
                         <Button size="sm" className="h-8" onClick={() => setUpdateLeadState(lead)}>
                           <Bell className="h-3.5 w-3.5" />
