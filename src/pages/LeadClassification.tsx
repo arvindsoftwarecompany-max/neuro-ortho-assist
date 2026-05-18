@@ -153,10 +153,35 @@ export default function LeadClassification() {
                         </div>
                       </div>
 
+                      {(() => {
+                        const chats = getMessagesForMobile(lead.mobile);
+                        const last = chats[chats.length - 1];
+                        if (!chats.length) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setChatLead(lead)}
+                            className="w-full text-left p-2.5 rounded-md bg-muted/30 border border-border/50 hover:border-primary/40 transition-colors mb-3"
+                          >
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                              <span className="flex items-center gap-1">
+                                <MessageSquareText className="h-3 w-3" />
+                                Latest baat-cheet • {last.sender || 'Staff'}
+                              </span>
+                              <span>{last.timestamp}</span>
+                            </div>
+                            <p className="text-xs text-foreground/90 line-clamp-2">{last.message}</p>
+                            {chats.length > 1 && (
+                              <p className="text-[10px] text-primary mt-1">+{chats.length - 1} aur messages — dekhne ke liye click karein</p>
+                            )}
+                          </button>
+                        );
+                      })()}
+
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" className="h-8" onClick={() => setChatLead(lead)}>
                           <MessageSquareText className="h-3.5 w-3.5" />
-                          Baat-cheet
+                          Baat-cheet ({getMessagesForMobile(lead.mobile).length})
                         </Button>
                         <Button size="sm" className="h-8" onClick={() => setUpdateLeadState(lead)}>
                           <Bell className="h-3.5 w-3.5" />
