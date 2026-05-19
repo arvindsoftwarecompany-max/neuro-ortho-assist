@@ -41,17 +41,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('user_id', userId)
       .single();
     if (data) {
-      if (data.is_active === false) {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
-        setProfile(null);
-        setLoading(false);
-        // Show alert for inactive user
-        setTimeout(() => {
-          alert('Aapka account deactivate hai. Admin se sampark karein.');
-        }, 100);
-        return;
+      // Admins bypass active/trial checks
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      const isAdmin = !!roleData;
+
+      if (!isAdmin) {
+        if (data.is_active === false) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setLoading(false);
+          setTimeout(() => {
+            alert('Aapka account abhi activate nahi hua hai. Admin se sampark karein.');
+          }, 100);
+          return;
+        }
+
+        // Trial expiry check
+        if (data.trial_start && data.trial_days != null) {
+          const start = new Date(data.trial_start).getTime();
+          const diffDays = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24));
+          if (diffDays >= data.trial_days) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            setLoading(false);
+            setTimeout(() => {
+              alert('Aapka trial period khatam ho gaya hai. Admin se sampark karein.');
+            }, 100);
+            return;
+          }
+        }
       }
       setProfile(data);
     }
