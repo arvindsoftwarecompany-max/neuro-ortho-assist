@@ -96,23 +96,55 @@ export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospita
       return;
     }
 
-    if (webhookUpdateUrl) {
+    const isNewLead = !lead.lead_id || lead.lead_id === 0;
+    const targetUrl = isNewLead ? webhookLeadUrl : webhookUpdateUrl;
+
+    if (targetUrl) {
       try {
-        await fetch(webhookUpdateUrl, {
+        const payload = isNewLead
+          ? {
+              patient_name: lead.patient_name,
+              mobile: mobile.trim(),
+              email: lead.email || '',
+              age: lead.age || 0,
+              gender: lead.gender || 'Other',
+              blood_group: lead.blood_group || '',
+              address: lead.address || '',
+              city: lead.city || '',
+              state: lead.state || '',
+              pincode: lead.pincode || '',
+              department: lead.department || '',
+              sub_specialty: lead.sub_specialty || '',
+              problem_description: lead.problem_description || '',
+              severity: lead.severity || 'Medium',
+              call_status: appointmentDate ? 'Appointment Booked' : (followupDate ? 'Followup' : 'New Lead'),
+              appointment_date: appointmentDate,
+              appointment_time: appointmentTime,
+              followup_date: followupDate,
+              doctor_assigned: lead.doctor_assigned || '',
+              employee_name: lead.employee_name || '',
+              source: 'WhatsApp',
+              priority: lead.priority || 'Normal',
+              remarks: lead.remarks || 'From Lead Classification (Chat)',
+              date_created: new Date().toISOString().split('T')[0],
+              last_contact_date: new Date().toISOString().split('T')[0],
+            }
+          : {
+              lead_id: lead.lead_id,
+              patient_name: lead.patient_name,
+              mobile: mobile.trim(),
+              appointment_date: appointmentDate,
+              appointment_time: appointmentTime,
+              followup_date: followupDate,
+              ...updates,
+            };
+        await fetch(targetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lead_id: lead.lead_id,
-            patient_name: lead.patient_name,
-            mobile: mobile.trim(),
-            appointment_date: appointmentDate,
-            appointment_time: appointmentTime,
-            followup_date: followupDate,
-            ...updates,
-          }),
+          body: JSON.stringify(payload),
         });
       } catch (err) {
-        console.error('[CRM] Update webhook error:', err);
+        console.error('[CRM] Webhook error:', err);
       }
     }
 
