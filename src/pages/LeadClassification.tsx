@@ -300,7 +300,9 @@ export default function LeadClassification() {
         onUpdate={updateLead}
         hospitalName={profile?.hospital_name}
         webhookUpdateUrl={profile?.webhook_update_url}
+        webhookLeadUrl={profile?.webhook_lead_url}
       />
+
     </div>
   );
 }
