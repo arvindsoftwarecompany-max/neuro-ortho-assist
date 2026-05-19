@@ -104,12 +104,13 @@ export default function AdminDashboard() {
   };
 
   const getTrialStatus = (profile: UserProfile) => {
-    if (!profile.trial_start) return { expired: false, remaining: profile.trial_days };
+    if (!profile.trial_start) return { expired: false, remaining: profile.trial_days, expiryDate: null as Date | null };
     const start = new Date(profile.trial_start);
+    const expiryDate = new Date(start.getTime() + profile.trial_days * 24 * 60 * 60 * 1000);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const remaining = profile.trial_days - diffDays;
-    return { expired: remaining <= 0, remaining: Math.max(0, remaining) };
+    return { expired: remaining <= 0, remaining: Math.max(0, remaining), expiryDate };
   };
 
   const filteredUsers = users.filter(u =>
@@ -229,6 +230,11 @@ export default function AdminDashboard() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" /> Trial: {trial.remaining} din baaki
+                            {trial.expiryDate && (
+                              <span className="ml-1 text-foreground/80">
+                                (Expiry: {format(trial.expiryDate, 'dd MMM yyyy')})
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>
