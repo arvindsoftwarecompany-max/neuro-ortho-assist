@@ -14,6 +14,7 @@ interface LeadUpdateSheetProps {
   onUpdate: (id: number, data: Partial<Lead>) => void;
   hospitalName?: string;
   webhookUpdateUrl?: string;
+  webhookLeadUrl?: string;
 }
 
 function buildWhatsAppMessage(lead: Lead, hospitalName: string): string {
