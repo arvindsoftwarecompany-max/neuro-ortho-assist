@@ -42,7 +42,7 @@ function buildWhatsAppMessage(lead: Lead, hospitalName: string): string {
   return lines.join('\n');
 }
 
-export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospitalName = 'Hospital', webhookUpdateUrl }: LeadUpdateSheetProps) {
+export default function LeadUpdateSheet({ lead, open, onClose, onUpdate, hospitalName = 'Hospital', webhookUpdateUrl, webhookLeadUrl }: LeadUpdateSheetProps) {
   const [mobile, setMobile] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
