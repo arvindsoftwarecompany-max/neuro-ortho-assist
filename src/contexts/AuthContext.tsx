@@ -89,11 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // onAuthStateChange fires immediately with INITIAL_SESSION on mount,
+    // so a separate getSession() call would only duplicate the profile/role fetches
+    // and slow things down on mobile networks.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          // Defer heavy DB work so the auth callback returns immediately (avoids mobile deadlocks).
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
@@ -101,13 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
