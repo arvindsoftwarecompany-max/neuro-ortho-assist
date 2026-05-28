@@ -21,13 +21,29 @@ export default function AuthPage() {
     if (loading) return;
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password; // never trim passwords
+
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
+        if (error) {
+          const msg = (error.message || '').toLowerCase();
+          if (msg.includes('invalid') || msg.includes('credentials')) {
+            throw new Error('Galat email ya password. Dhyan dein: password case-sensitive hai aur shuru/aakhir mein space nahi hona chahiye.');
+          }
+          if (msg.includes('email not confirmed')) {
+            throw new Error('Email confirm nahi hai. Apne inbox mein verification link check karein.');
+          }
+          throw error;
+        }
         toast({ title: 'Login successful!' });
       } else {
-        const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+        const { error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: cleanPassword,
+          options: { emailRedirectTo: `${window.location.origin}/` },
+        });
         if (error) throw error;
 
         const { data: { user } } = await supabase.auth.getUser();
