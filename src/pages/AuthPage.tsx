@@ -132,6 +132,9 @@ export default function AuthPage() {
                 required
                 minLength={6}
                 autoComplete={isLogin ? "current-password" : "new-password"}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="h-11 text-base"
               />
             </div>
