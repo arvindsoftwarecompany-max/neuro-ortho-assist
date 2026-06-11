@@ -215,7 +215,9 @@ export default function LeadClassification() {
         {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Chat data load ho raha hai…</span>}
         {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
         {chatConfigured && !chatLoading && !chatError && (
-          <span className="text-primary">💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified</span>
+          <span className="text-primary">
+            💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified (today + last 50)
+          </span>
         )}
       </div>
 
