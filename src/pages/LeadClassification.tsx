@@ -112,7 +112,14 @@ export default function LeadClassification() {
   }, [allChats]);
 
   useEffect(() => {
-    chatLeads.forEach(async (cl) => {
+    // Only analyze: (1) today's leads + (2) last 50 most recent leads
+    const todayLeads = chatLeads.filter((cl) => isToday(cl.firstTimestamp) || isToday(cl.lastTimestamp));
+    const last50 = chatLeads.slice(0, 50);
+    const toAnalyzeMap = new Map<string, ChatLead>();
+    todayLeads.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
+    last50.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
+
+    toAnalyzeMap.forEach(async (cl) => {
       const key = `${cl.mobile}::${cl.messages.length}`;
       if (analyzedKeysRef.current.has(key)) return;
       analyzedKeysRef.current.add(key);
