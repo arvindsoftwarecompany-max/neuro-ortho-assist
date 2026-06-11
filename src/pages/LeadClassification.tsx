@@ -42,6 +42,14 @@ function fmtDate(s: string): string {
   return d.toLocaleString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function isToday(s: string): boolean {
+  if (!s) return false;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
 function toLeadShape(cl: ChatLead, existing?: Lead): Lead {
   if (existing) return { ...existing, mobile: cl.mobile, patient_name: cl.patient_name };
   return {
