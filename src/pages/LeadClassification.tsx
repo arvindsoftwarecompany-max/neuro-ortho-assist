@@ -42,6 +42,14 @@ function fmtDate(s: string): string {
   return d.toLocaleString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function isToday(s: string): boolean {
+  if (!s) return false;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
 function toLeadShape(cl: ChatLead, existing?: Lead): Lead {
   if (existing) return { ...existing, mobile: cl.mobile, patient_name: cl.patient_name };
   return {
@@ -104,7 +112,14 @@ export default function LeadClassification() {
   }, [allChats]);
 
   useEffect(() => {
-    chatLeads.forEach(async (cl) => {
+    // Only analyze: (1) today's leads + (2) last 50 most recent leads
+    const todayLeads = chatLeads.filter((cl) => isToday(cl.firstTimestamp) || isToday(cl.lastTimestamp));
+    const last50 = chatLeads.slice(0, 50);
+    const toAnalyzeMap = new Map<string, ChatLead>();
+    todayLeads.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
+    last50.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
+
+    toAnalyzeMap.forEach(async (cl) => {
       const key = `${cl.mobile}::${cl.messages.length}`;
       if (analyzedKeysRef.current.has(key)) return;
       analyzedKeysRef.current.add(key);
@@ -200,7 +215,9 @@ export default function LeadClassification() {
         {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Chat data load ho raha hai…</span>}
         {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
         {chatConfigured && !chatLoading && !chatError && (
-          <span className="text-primary">💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified</span>
+          <span className="text-primary">
+            💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified (today + last 50)
+          </span>
         )}
       </div>
 
