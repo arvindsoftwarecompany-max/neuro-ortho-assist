@@ -86,6 +86,16 @@ export default function LeadClassification() {
   const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
   const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
   const analyzedKeysRef = useRef<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
+  const calledStorageKey = `lead-classification-called::${profile?.id || 'anon'}`;
+  const [calledMap, setCalledMap] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(calledStorageKey) || '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(calledStorageKey, JSON.stringify(calledMap)); } catch {}
+  }, [calledMap, calledStorageKey]);
+  const toggleCalled = (mobile: string) => setCalledMap((s) => ({ ...s, [mobile]: !s[mobile] }));
 
   const chatLeads = useMemo<ChatLead[]>(() => {
     const map = new Map<string, ChatMessage[]>();
