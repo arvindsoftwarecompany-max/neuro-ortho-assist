@@ -308,17 +308,17 @@ export default function LeadClassification() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1 flex-wrap">
-                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)}>
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)} disabled={isCalled}>
                             <Phone className="h-3.5 w-3.5 text-success" />
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="WhatsApp" onClick={() => handleWhatsApp(cl)}>
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="WhatsApp" onClick={() => handleWhatsApp(cl)} disabled={isCalled}>
                             <MessageCircle className="h-3.5 w-3.5 text-[hsl(142,70%,40%)]" />
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 px-2 gap-1" title="Chat dekhein" onClick={() => setChatLead(leadShape)}>
+                          <Button size="sm" variant="outline" className="h-7 px-2 gap-1" title="Chat dekhein" onClick={() => setChatLead(leadShape)} disabled={isCalled}>
                             <MessageSquareText className="h-3.5 w-3.5" />
                             <span className="text-[11px]">{cl.messages.length}</span>
                           </Button>
-                          <Button size="sm" className="h-7 px-2 gap-1" title="Follow-up form" onClick={() => setUpdateLeadState(leadShape)}>
+                          <Button size="sm" className="h-7 px-2 gap-1" title="Follow-up form" onClick={() => setUpdateLeadState(leadShape)} disabled={isCalled}>
                             <Bell className="h-3.5 w-3.5" />
                             <span className="text-[11px] hidden sm:inline">Follow-up</span>
                           </Button>
@@ -326,8 +326,9 @@ export default function LeadClassification() {
                             size="sm"
                             variant={isCalled ? 'default' : 'outline'}
                             className={cn('h-7 px-2 gap-1', isCalled && 'bg-success hover:bg-success/90 text-white')}
-                            title={isCalled ? 'Called — undo' : 'Mark as Called'}
+                            title={isCalled ? 'call ho chuka ha' : 'Mark as Called'}
                             onClick={() => toggleCalled(cl.mobile)}
+                            disabled={isCalled}
                           >
                             {isCalled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PhoneCall className="h-3.5 w-3.5" />}
                             <span className="text-[11px] hidden sm:inline">{isCalled ? 'call ho chuka ha' : 'Call done?'}</span>
