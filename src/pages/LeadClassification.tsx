@@ -81,6 +81,7 @@ interface LeadClassificationProps {
   title?: string;
   subtitle?: string;
   skipAnalysis?: boolean;
+  minimal?: boolean;
 }
 
 export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis }: LeadClassificationProps) {
