@@ -330,7 +330,7 @@ export default function LeadClassification() {
                             onClick={() => toggleCalled(cl.mobile)}
                           >
                             {isCalled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PhoneCall className="h-3.5 w-3.5" />}
-                            <span className="text-[11px] hidden sm:inline">{isCalled ? 'Called' : 'Call done?'}</span>
+                            <span className="text-[11px] hidden sm:inline">{isCalled ? 'call ho chuka ha' : 'Call done?'}</span>
                           </Button>
                         </div>
                       </TableCell>
