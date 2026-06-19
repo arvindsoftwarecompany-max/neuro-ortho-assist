@@ -76,13 +76,19 @@ const tempBadge: Record<Temperature, { label: string; icon: any; className: stri
   cold: { label: 'COLD', icon: Snowflake,   className: 'bg-blue-500/15 text-blue-400 border-blue-500/40' },
 };
 
-export default function LeadClassification() {
+interface LeadClassificationProps {
+  defaultFilter?: 'all' | Temperature;
+  title?: string;
+  subtitle?: string;
+}
+
+export default function LeadClassification({ defaultFilter, title, subtitle }: LeadClassificationProps) {
   const { profile } = useAuth();
   const { leads, updateLead } = useLeadsData();
   const { messages: allChats, loading: chatLoading, error: chatError, configured: chatConfigured, fetchData } = useChatData();
   const [chatLead, setChatLead] = useState<Lead | null>(null);
   const [updateLeadState, setUpdateLeadState] = useState<Lead | null>(null);
-  const [filter, setFilter] = useState<'all' | Temperature>('all');
+  const [filter, setFilter] = useState<'all' | Temperature>(defaultFilter || 'all');
   const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
   const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
   const analyzedKeysRef = useRef<Set<string>>(new Set());
@@ -209,10 +215,10 @@ export default function LeadClassification() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" /> Lead Classification
+            <Sparkles className="h-6 w-6 text-primary" /> {title || 'Lead Classification'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai
+            {subtitle || 'Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai'}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>

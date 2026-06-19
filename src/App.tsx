@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import OpdReminder from "@/pages/OpdReminder";
 import IpdFollowup from "@/pages/IpdFollowup";
 import LeadClassification from "@/pages/LeadClassification";
+import HotLeads from "@/pages/HotLeads";
 import AuthPage from "@/pages/AuthPage";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -59,6 +60,7 @@ const AppRoutes = () => (
       <Route path="/opd-reminder" element={<OpdReminder />} />
       <Route path="/ipd-followup" element={<IpdFollowup />} />
       <Route path="/lead-classification" element={<LeadClassification />} />
+      <Route path="/hot-leads" element={<HotLeads />} />
       <Route path="/leads" element={<SearchLeads />} />
       <Route path="/add-lead" element={<AddLead />} />
       <Route path="/patient/:id" element={<PatientReport />} />
