@@ -7,6 +7,7 @@ export default function HotLeads() {
       title="Hot Leads"
       subtitle="Sirf HOT classified leads — turant call karein!"
       skipAnalysis
+      minimal
     />
   );
 }
