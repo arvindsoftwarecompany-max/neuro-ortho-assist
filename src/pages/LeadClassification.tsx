@@ -88,7 +88,7 @@ export default function LeadClassification() {
   const analyzedKeysRef = useRef<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
-  const calledStorageKey = `lead-classification-called::${profile?.id || 'anon'}`;
+  const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
   const [calledMap, setCalledMap] = useState<Record<string, boolean>>(() => {
     try { return JSON.parse(localStorage.getItem(calledStorageKey) || '{}'); } catch { return {}; }
   });
