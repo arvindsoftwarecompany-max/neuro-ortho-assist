@@ -168,6 +168,14 @@ export default function LeadClassification() {
     return chatLeads.filter((cl) => analyses[cl.mobile]?.temperature === filter);
   }, [chatLeads, analyses, filter]);
 
+  useEffect(() => { setPage(1); }, [filter, chatLeads.length]);
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedLeads = useMemo(
+    () => filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredLeads, currentPage]
+  );
+
   const counts = useMemo(() => {
     const c = { hot: 0, warm: 0, cold: 0, pending: 0 };
     chatLeads.forEach((cl) => {
