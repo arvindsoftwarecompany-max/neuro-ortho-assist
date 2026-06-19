@@ -229,33 +229,37 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
         </Button>
       </motion.div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'hot', 'warm', 'cold'] as const).map((f) => {
-          const count = f === 'all' ? chatLeads.length : counts[f as Temperature];
-          const label = f === 'all' ? 'All' : tempBadge[f as Temperature].label;
-          return (
-            <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)} className="h-8">
-              {label} <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{count}</Badge>
-            </Button>
-          );
-        })}
-        {counts.pending > 0 && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
-            <Loader2 className="h-3 w-3 animate-spin" /> {counts.pending} AI analyze ho rahe hain…
-          </span>
-        )}
-      </div>
+      {!minimal && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', 'hot', 'warm', 'cold'] as const).map((f) => {
+            const count = f === 'all' ? chatLeads.length : counts[f as Temperature];
+            const label = f === 'all' ? 'All' : tempBadge[f as Temperature].label;
+            return (
+              <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)} className="h-8">
+                {label} <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{count}</Badge>
+              </Button>
+            );
+          })}
+          {counts.pending > 0 && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
+              <Loader2 className="h-3 w-3 animate-spin" /> {counts.pending} AI analyze ho rahe hain…
+            </span>
+          )}
+        </div>
+      )}
 
-      <div className="glass-card p-3 text-xs">
-        {!chatConfigured && <span className="text-warning">⚠️ Settings me Google Chat Sheet URL configure karein.</span>}
-        {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Chat data load ho raha hai…</span>}
-        {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
-        {chatConfigured && !chatLoading && !chatError && (
-          <span className="text-primary">
-            💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified (today + last 50)
-          </span>
-        )}
-      </div>
+      {!minimal && (
+        <div className="glass-card p-3 text-xs">
+          {!chatConfigured && <span className="text-warning">⚠️ Settings me Google Chat Sheet URL configure karein.</span>}
+          {chatConfigured && chatLoading && <span className="text-muted-foreground">⏳ Chat data load ho raha hai…</span>}
+          {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
+          {chatConfigured && !chatLoading && !chatError && (
+            <span className="text-primary">
+              💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified (today + last 50)
+            </span>
+          )}
+        </div>
+      )}
 
       {chatLoading ? (
         <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
