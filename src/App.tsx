@@ -59,6 +59,7 @@ const AppRoutes = () => (
       <Route path="/opd-reminder" element={<OpdReminder />} />
       <Route path="/ipd-followup" element={<IpdFollowup />} />
       <Route path="/lead-classification" element={<LeadClassification />} />
+      <Route path="/hot-leads" element={<HotLeads />} />
       <Route path="/leads" element={<SearchLeads />} />
       <Route path="/add-lead" element={<AddLead />} />
       <Route path="/patient/:id" element={<PatientReport />} />
