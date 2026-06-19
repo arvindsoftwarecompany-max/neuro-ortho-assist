@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles, Bell, Phone, MessageCircle } from 'lucide-react';
+import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles, Bell, Phone, MessageCircle, PhoneCall, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -86,6 +86,16 @@ export default function LeadClassification() {
   const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
   const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
   const analyzedKeysRef = useRef<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
+  const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
+  const [calledMap, setCalledMap] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(calledStorageKey) || '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(calledStorageKey, JSON.stringify(calledMap)); } catch {}
+  }, [calledMap, calledStorageKey]);
+  const toggleCalled = (mobile: string) => setCalledMap((s) => ({ ...s, [mobile]: !s[mobile] }));
 
   const chatLeads = useMemo<ChatLead[]>(() => {
     const map = new Map<string, ChatMessage[]>();
@@ -157,6 +167,14 @@ export default function LeadClassification() {
     if (filter === 'all') return chatLeads;
     return chatLeads.filter((cl) => analyses[cl.mobile]?.temperature === filter);
   }, [chatLeads, analyses, filter]);
+
+  useEffect(() => { setPage(1); }, [filter, chatLeads.length]);
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedLeads = useMemo(
+    () => filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredLeads, currentPage]
+  );
 
   const counts = useMemo(() => {
     const c = { hot: 0, warm: 0, cold: 0, pending: 0 };
@@ -241,17 +259,21 @@ export default function LeadClassification() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((cl) => {
+                {pagedLeads.map((cl) => {
                   const a = analyses[cl.mobile];
                   const isAnalyzing = analyzing[cl.mobile];
                   const T = a ? tempBadge[a.temperature] : null;
                   const Icon = T?.icon;
                   const existing = findExistingLead(cl.mobile);
                   const leadShape = toLeadShape(cl, existing);
+                  const isCalled = !!calledMap[cl.mobile];
                   return (
-                    <TableRow key={cl.mobile} className="hover:bg-muted/20">
+                    <TableRow key={cl.mobile} className={cn('hover:bg-muted/20', isCalled && 'bg-success/5')}>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDate(cl.firstTimestamp)}</TableCell>
-                      <TableCell className="font-medium text-sm">{cl.patient_name}</TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {cl.patient_name}
+                        {isCalled && <CheckCircle2 className="inline-block ml-1 h-3.5 w-3.5 text-success" />}
+                      </TableCell>
                       <TableCell className="text-xs font-mono">{cl.mobile}</TableCell>
                       <TableCell>
                         {a && T && Icon ? (
@@ -276,7 +298,7 @@ export default function LeadClassification() {
                         {a ? a.nextAction : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 flex-wrap">
                           <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)}>
                             <Phone className="h-3.5 w-3.5 text-success" />
                           </Button>
@@ -291,12 +313,22 @@ export default function LeadClassification() {
                             <Bell className="h-3.5 w-3.5" />
                             <span className="text-[11px] hidden sm:inline">Follow-up</span>
                           </Button>
+                          <Button
+                            size="sm"
+                            variant={isCalled ? 'default' : 'outline'}
+                            className={cn('h-7 px-2 gap-1', isCalled && 'bg-success hover:bg-success/90 text-white')}
+                            title={isCalled ? 'Called — undo' : 'Mark as Called'}
+                            onClick={() => toggleCalled(cl.mobile)}
+                          >
+                            {isCalled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PhoneCall className="h-3.5 w-3.5" />}
+                            <span className="text-[11px] hidden sm:inline">{isCalled ? 'Called' : 'Call done?'}</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {filteredLeads.length === 0 && (
+                {pagedLeads.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                       Is filter me koi lead nahi hai.
@@ -306,6 +338,22 @@ export default function LeadClassification() {
               </TableBody>
             </Table>
           </div>
+          {filteredLeads.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/50 text-xs">
+              <span className="text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                </Button>
+                <span className="px-2">Page {currentPage} / {totalPages}</span>
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
