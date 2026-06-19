@@ -80,9 +80,10 @@ interface LeadClassificationProps {
   defaultFilter?: 'all' | Temperature;
   title?: string;
   subtitle?: string;
+  skipAnalysis?: boolean;
 }
 
-export default function LeadClassification({ defaultFilter, title, subtitle }: LeadClassificationProps) {
+export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis }: LeadClassificationProps) {
   const { profile } = useAuth();
   const { leads, updateLead } = useLeadsData();
   const { messages: allChats, loading: chatLoading, error: chatError, configured: chatConfigured, fetchData } = useChatData();
@@ -137,6 +138,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle }: L
   }, [allChats]);
 
   useEffect(() => {
+    if (skipAnalysis) return;
     // Only analyze: (1) today's leads + (2) last 50 most recent leads
     const todayLeads = chatLeads.filter((cl) => isToday(cl.firstTimestamp) || isToday(cl.lastTimestamp));
     const last50 = chatLeads.slice(0, 50);

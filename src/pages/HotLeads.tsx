@@ -6,6 +6,7 @@ export default function HotLeads() {
       defaultFilter="hot"
       title="Hot Leads"
       subtitle="Sirf HOT classified leads — turant call karein!"
+      skipAnalysis
     />
   );
 }
