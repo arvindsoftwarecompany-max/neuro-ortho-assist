@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, UserPlus, BarChart3, Calendar, Settings, 
-  Menu, X, Activity, Bell, LogOut, Stethoscope, Flame
+  Menu, X, Activity, Bell, LogOut, Stethoscope, Flame, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
