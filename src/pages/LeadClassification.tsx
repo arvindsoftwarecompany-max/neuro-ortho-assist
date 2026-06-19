@@ -338,6 +338,22 @@ export default function LeadClassification() {
               </TableBody>
             </Table>
           </div>
+          {filteredLeads.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/50 text-xs">
+              <span className="text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                </Button>
+                <span className="px-2">Page {currentPage} / {totalPages}</span>
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
