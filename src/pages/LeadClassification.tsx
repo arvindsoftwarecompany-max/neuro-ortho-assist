@@ -259,17 +259,21 @@ export default function LeadClassification() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((cl) => {
+                {pagedLeads.map((cl) => {
                   const a = analyses[cl.mobile];
                   const isAnalyzing = analyzing[cl.mobile];
                   const T = a ? tempBadge[a.temperature] : null;
                   const Icon = T?.icon;
                   const existing = findExistingLead(cl.mobile);
                   const leadShape = toLeadShape(cl, existing);
+                  const isCalled = !!calledMap[cl.mobile];
                   return (
-                    <TableRow key={cl.mobile} className="hover:bg-muted/20">
+                    <TableRow key={cl.mobile} className={cn('hover:bg-muted/20', isCalled && 'bg-success/5')}>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDate(cl.firstTimestamp)}</TableCell>
-                      <TableCell className="font-medium text-sm">{cl.patient_name}</TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {cl.patient_name}
+                        {isCalled && <CheckCircle2 className="inline-block ml-1 h-3.5 w-3.5 text-success" />}
+                      </TableCell>
                       <TableCell className="text-xs font-mono">{cl.mobile}</TableCell>
                       <TableCell>
                         {a && T && Icon ? (
@@ -294,7 +298,7 @@ export default function LeadClassification() {
                         {a ? a.nextAction : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 flex-wrap">
                           <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)}>
                             <Phone className="h-3.5 w-3.5 text-success" />
                           </Button>
@@ -309,12 +313,22 @@ export default function LeadClassification() {
                             <Bell className="h-3.5 w-3.5" />
                             <span className="text-[11px] hidden sm:inline">Follow-up</span>
                           </Button>
+                          <Button
+                            size="sm"
+                            variant={isCalled ? 'default' : 'outline'}
+                            className={cn('h-7 px-2 gap-1', isCalled && 'bg-success hover:bg-success/90 text-white')}
+                            title={isCalled ? 'Called — undo' : 'Mark as Called'}
+                            onClick={() => toggleCalled(cl.mobile)}
+                          >
+                            {isCalled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PhoneCall className="h-3.5 w-3.5" />}
+                            <span className="text-[11px] hidden sm:inline">{isCalled ? 'Called' : 'Call done?'}</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {filteredLeads.length === 0 && (
+                {pagedLeads.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                       Is filter me koi lead nahi hai.
