@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles, Bell, Phone, MessageCircle } from 'lucide-react';
+import { Flame, Thermometer, Snowflake, MessageSquareText, Loader2, RefreshCw, Sparkles, Bell, Phone, MessageCircle, PhoneCall, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
