@@ -261,6 +261,56 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
         <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : chatLeads.length === 0 ? (
         <div className="glass-card p-8 text-center text-sm text-muted-foreground">Google Chat Sheet me koi data nahi mila.</div>
+      ) : minimal ? (
+        <div className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Mobile</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedLeads.map((cl) => {
+                  const isCalled = !!calledMap[cl.mobile];
+                  return (
+                    <TableRow key={cl.mobile} className={cn('hover:bg-muted/20', isCalled && 'bg-success/5')}>
+                      <TableCell className="font-medium text-sm">
+                        {cl.patient_name}
+                        {isCalled && <CheckCircle2 className="inline-block ml-1 h-3.5 w-3.5 text-success" />}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">{cl.mobile}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {pagedLeads.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-sm text-muted-foreground py-8">
+                      Is filter me koi lead nahi hai.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {filteredLeads.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border/50 text-xs">
+              <span className="text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                </Button>
+                <span className="px-2">Page {currentPage} / {totalPages}</span>
+                <Button size="sm" variant="outline" className="h-7 px-2" disabled={currentPage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="glass-card overflow-hidden">
           <div className="overflow-x-auto">
