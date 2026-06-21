@@ -5,8 +5,6 @@ export default function HotLeads() {
     <LeadClassification
       defaultFilter="hot"
       title="Hot Leads"
-      subtitle="Sirf HOT classified leads — turant call karein!"
-      skipAnalysis
       minimal
     />
   );
