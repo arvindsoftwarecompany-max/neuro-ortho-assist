@@ -97,8 +97,13 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   const analyzedKeysRef = useRef<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
-  const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
+  const analysisStorageKey = `lead-classification-analyses::${profile?.hospital_name || 'anon'}`;
   const [calledMap, setCalledMap] = useState<Record<string, boolean>>({});
+  const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
+  const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
+  const analyzedKeysRef = useRef<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   // Load calledMap whenever storage key becomes stable (profile loaded)
   useEffect(() => {
@@ -112,6 +117,19 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   useEffect(() => {
     try { localStorage.setItem(calledStorageKey, JSON.stringify(calledMap)); } catch {}
   }, [calledMap, calledStorageKey]);
+
+  // Load persisted analyses whenever storage key becomes stable
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(analysisStorageKey);
+      if (stored) setAnalyses(JSON.parse(stored));
+    } catch {}
+  }, [analysisStorageKey]);
+
+  // Persist analyses whenever they change
+  useEffect(() => {
+    try { localStorage.setItem(analysisStorageKey, JSON.stringify(analyses)); } catch {}
+  }, [analyses, analysisStorageKey]);
 
   const toggleCalled = (mobile: string) => setCalledMap((s) => ({ ...s, [mobile]: !s[mobile] }));
 
