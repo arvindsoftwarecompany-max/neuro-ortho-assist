@@ -183,9 +183,11 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   };
 
   const filteredLeads = useMemo(() => {
-    if (filter === 'all') return chatLeads;
-    return chatLeads.filter((cl) => analyses[cl.mobile]?.temperature === filter);
-  }, [chatLeads, analyses, filter]);
+    let list = chatLeads;
+    if (onlyCalled) list = list.filter((cl) => !!calledMap[cl.mobile]);
+    if (filter === 'all') return list;
+    return list.filter((cl) => analyses[cl.mobile]?.temperature === filter);
+  }, [chatLeads, analyses, filter, onlyCalled, calledMap]);
 
   useEffect(() => { setPage(1); }, [filter, chatLeads.length]);
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
