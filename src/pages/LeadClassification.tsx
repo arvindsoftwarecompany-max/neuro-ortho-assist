@@ -98,6 +98,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
   const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
+  const analysisStorageKey = `lead-classification-analyses::${profile?.hospital_name || 'anon'}`;
   const [calledMap, setCalledMap] = useState<Record<string, boolean>>({});
 
   // Load calledMap whenever storage key becomes stable (profile loaded)
@@ -112,6 +113,19 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   useEffect(() => {
     try { localStorage.setItem(calledStorageKey, JSON.stringify(calledMap)); } catch {}
   }, [calledMap, calledStorageKey]);
+
+  // Load persisted analyses whenever storage key becomes stable
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(analysisStorageKey);
+      if (stored) setAnalyses(JSON.parse(stored));
+    } catch {}
+  }, [analysisStorageKey]);
+
+  // Persist analyses whenever they change
+  useEffect(() => {
+    try { localStorage.setItem(analysisStorageKey, JSON.stringify(analyses)); } catch {}
+  }, [analyses, analysisStorageKey]);
 
   const toggleCalled = (mobile: string) => setCalledMap((s) => ({ ...s, [mobile]: !s[mobile] }));
 
@@ -223,13 +237,17 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" /> {title || 'Lead Classification'}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {subtitle || 'Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai'}
-          </p>
+          {!minimal && (
+            <p className="text-sm text-muted-foreground">
+              {subtitle || 'Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai'}
+            </p>
+          )}
         </div>
-        <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>
-          <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} /> Re-analyze
-        </Button>
+        {!minimal && (
+          <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>
+            <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} /> Re-analyze
+          </Button>
+        )}
       </motion.div>
 
       {!minimal && (
