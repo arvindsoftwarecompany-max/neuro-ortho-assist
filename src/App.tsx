@@ -16,6 +16,7 @@ import OpdReminder from "@/pages/OpdReminder";
 import IpdFollowup from "@/pages/IpdFollowup";
 import LeadClassification from "@/pages/LeadClassification";
 import HotLeads from "@/pages/HotLeads";
+import CalledLeads from "@/pages/CalledLeads";
 import AuthPage from "@/pages/AuthPage";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
