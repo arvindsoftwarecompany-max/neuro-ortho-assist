@@ -292,6 +292,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead className="whitespace-nowrap">Mobile</TableHead>
                 </TableRow>
@@ -301,6 +302,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
                   const isCalled = !!calledMap[cl.mobile];
                   return (
                     <TableRow key={cl.mobile} className={cn('hover:bg-muted/20', isCalled && 'bg-success/5')}>
+                      <TableCell className="text-xs whitespace-nowrap">{fmtDate(cl.lastTimestamp)}</TableCell>
                       <TableCell className="font-medium text-sm">
                         {cl.patient_name}
                         {isCalled && <CheckCircle2 className="inline-block ml-1 h-3.5 w-3.5 text-success" />}
@@ -311,7 +313,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
                 })}
                 {pagedLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center text-sm text-muted-foreground py-8">
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
                       Is filter me koi lead nahi hai.
                     </TableCell>
                   </TableRow>
