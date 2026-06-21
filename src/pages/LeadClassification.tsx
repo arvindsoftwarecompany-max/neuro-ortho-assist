@@ -83,9 +83,10 @@ interface LeadClassificationProps {
   skipAnalysis?: boolean;
   minimal?: boolean;
   onlyCalled?: boolean;
+  showActions?: boolean;
 }
 
-export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis, minimal, onlyCalled }: LeadClassificationProps) {
+export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis, minimal, onlyCalled, showActions }: LeadClassificationProps) {
   const { profile } = useAuth();
   const { leads, updateLead } = useLeadsData();
   const { messages: allChats, loading: chatLoading, error: chatError, configured: chatConfigured, fetchData } = useChatData();
@@ -295,11 +296,14 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
                   <TableHead className="whitespace-nowrap">Date</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead className="whitespace-nowrap">Mobile</TableHead>
+                  {showActions && <TableHead className="text-right whitespace-nowrap">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pagedLeads.map((cl) => {
                   const isCalled = !!calledMap[cl.mobile];
+                  const existing = findExistingLead(cl.mobile);
+                  const leadShape = toLeadShape(cl, existing);
                   return (
                     <TableRow key={cl.mobile} className={cn('hover:bg-muted/20', isCalled && 'bg-success/5')}>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDate(cl.lastTimestamp)}</TableCell>
@@ -308,12 +312,43 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
                         {isCalled && <CheckCircle2 className="inline-block ml-1 h-3.5 w-3.5 text-success" />}
                       </TableCell>
                       <TableCell className="text-xs font-mono">{cl.mobile}</TableCell>
+                      {showActions && (
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1 flex-wrap">
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Call" onClick={() => handleCall(cl.mobile)} disabled={isCalled}>
+                              <Phone className="h-3.5 w-3.5 text-success" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="WhatsApp" onClick={() => handleWhatsApp(cl)} disabled={isCalled}>
+                              <MessageCircle className="h-3.5 w-3.5 text-[hsl(142,70%,40%)]" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 px-2 gap-1" title="Chat dekhein" onClick={() => setChatLead(leadShape)} disabled={isCalled}>
+                              <MessageSquareText className="h-3.5 w-3.5" />
+                              <span className="text-[11px]">{cl.messages.length}</span>
+                            </Button>
+                            <Button size="sm" className="h-7 px-2 gap-1" title="Follow-up form" onClick={() => setUpdateLeadState(leadShape)} disabled={isCalled}>
+                              <Bell className="h-3.5 w-3.5" />
+                              <span className="text-[11px] hidden sm:inline">Follow-up</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={isCalled ? 'default' : 'outline'}
+                              className={cn('h-7 px-2 gap-1', isCalled && 'bg-success hover:bg-success/90 text-white')}
+                              title={isCalled ? 'call ho chuka ha' : 'Mark as Called'}
+                              onClick={() => toggleCalled(cl.mobile)}
+                              disabled={isCalled}
+                            >
+                              {isCalled ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PhoneCall className="h-3.5 w-3.5" />}
+                              <span className="text-[11px] hidden sm:inline">{isCalled ? 'call ho chuka ha' : 'Call done?'}</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
                 {pagedLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
+                    <TableCell colSpan={showActions ? 4 : 3} className="text-center text-sm text-muted-foreground py-8">
                       Is filter me koi lead nahi hai.
                     </TableCell>
                   </TableRow>
