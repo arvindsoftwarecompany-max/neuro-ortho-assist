@@ -83,9 +83,10 @@ interface LeadClassificationProps {
   skipAnalysis?: boolean;
   minimal?: boolean;
   onlyCalled?: boolean;
+  showActions?: boolean;
 }
 
-export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis, minimal, onlyCalled }: LeadClassificationProps) {
+export default function LeadClassification({ defaultFilter, title, subtitle, skipAnalysis, minimal, onlyCalled, showActions }: LeadClassificationProps) {
   const { profile } = useAuth();
   const { leads, updateLead } = useLeadsData();
   const { messages: allChats, loading: chatLoading, error: chatError, configured: chatConfigured, fetchData } = useChatData();
