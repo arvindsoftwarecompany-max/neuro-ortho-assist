@@ -6,6 +6,7 @@ export default function HotLeads() {
       defaultFilter="hot"
       title="Hot Leads"
       minimal
+      showActions
     />
   );
 }
