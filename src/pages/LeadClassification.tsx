@@ -237,13 +237,17 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" /> {title || 'Lead Classification'}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {subtitle || 'Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai'}
-          </p>
+          {!minimal && (
+            <p className="text-sm text-muted-foreground">
+              {subtitle || 'Google Chat Sheet ke har patient ko AI khud Hot / Warm / Cold classify karta hai'}
+            </p>
+          )}
         </div>
-        <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>
-          <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} /> Re-analyze
-        </Button>
+        {!minimal && (
+          <Button variant="outline" size="sm" onClick={reanalyze} disabled={chatLoading}>
+            <RefreshCw className={cn('h-3.5 w-3.5', chatLoading && 'animate-spin')} /> Re-analyze
+          </Button>
+        )}
       </motion.div>
 
       {!minimal && (
