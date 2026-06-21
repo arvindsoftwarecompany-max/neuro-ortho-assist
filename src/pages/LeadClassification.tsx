@@ -97,13 +97,9 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   const analyzedKeysRef = useRef<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
+  const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
   const analysisStorageKey = `lead-classification-analyses::${profile?.hospital_name || 'anon'}`;
   const [calledMap, setCalledMap] = useState<Record<string, boolean>>({});
-  const [analyses, setAnalyses] = useState<Record<string, Classification>>({});
-  const [analyzing, setAnalyzing] = useState<Record<string, boolean>>({});
-  const analyzedKeysRef = useRef<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 50;
 
   // Load calledMap whenever storage key becomes stable (profile loaded)
   useEffect(() => {
