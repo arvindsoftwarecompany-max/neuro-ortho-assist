@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, UserPlus, BarChart3, Calendar, Settings, 
-  Menu, X, Activity, Bell, LogOut, Stethoscope, Flame, Zap
+  Menu, X, Activity, Bell, LogOut, Stethoscope, Flame, Zap, PhoneCall
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,7 @@ const navItems = [
   { path: '/ipd-followup', label: 'IPD Follow-up', icon: Activity },
   { path: '/lead-classification', label: 'Lead Classification', icon: Flame },
   { path: '/hot-leads', label: 'Hot Leads', icon: Zap },
+  { path: '/called-leads', label: 'Called Leads', icon: PhoneCall },
   { path: '/leads', label: 'Search Leads', icon: Search },
   { path: '/add-lead', label: 'Add Lead', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
