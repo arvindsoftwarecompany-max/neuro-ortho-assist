@@ -156,35 +156,49 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
 
   useEffect(() => {
     if (skipAnalysis) return;
-    // Only analyze: (1) today's leads + (2) last 50 most recent leads
     const todayLeads = chatLeads.filter((cl) => isToday(cl.firstTimestamp) || isToday(cl.lastTimestamp));
     const last50 = chatLeads.slice(0, 50);
     const toAnalyzeMap = new Map<string, ChatLead>();
     todayLeads.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
     last50.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
 
-    toAnalyzeMap.forEach(async (cl) => {
-      const key = `${cl.mobile}::${cl.messages.length}`;
-      if (analyzedKeysRef.current.has(key)) return;
-      analyzedKeysRef.current.add(key);
-      setAnalyzing((s) => ({ ...s, [cl.mobile]: true }));
-      try {
-        const { data, error } = await supabase.functions.invoke('classify-chat-lead', {
-          body: {
-            patient_name: cl.patient_name, mobile: cl.mobile,
-            messages: cl.messages.map((m) => ({ timestamp: m.timestamp, sender: m.sender, message: m.message })),
-          },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        setAnalyses((s) => ({ ...s, [cl.mobile]: data as Classification }));
-      } catch (e) {
-        // silent — row will show pending
-      } finally {
-        setAnalyzing((s) => ({ ...s, [cl.mobile]: false }));
+    let cancelled = false;
+    (async () => {
+      for (const cl of toAnalyzeMap.values()) {
+        if (cancelled) return;
+        const key = `${cl.mobile}::${cl.messages.length}`;
+        if (analyzedKeysRef.current.has(key)) continue;
+        // Skip if we already have a cached analysis (from localStorage)
+        if (analyses[cl.mobile]) { analyzedKeysRef.current.add(key); continue; }
+        analyzedKeysRef.current.add(key);
+        setAnalyzing((s) => ({ ...s, [cl.mobile]: true }));
+        try {
+          const { data, error } = await supabase.functions.invoke('classify-chat-lead', {
+            body: {
+              patient_name: cl.patient_name, mobile: cl.mobile,
+              messages: cl.messages.map((m) => ({ timestamp: m.timestamp, sender: m.sender, message: m.message })),
+            },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          setAnalyses((s) => ({ ...s, [cl.mobile]: data as Classification }));
+        } catch (e: any) {
+          // On rate-limit, allow retry later & back off
+          const msg = String(e?.message || '');
+          if (msg.includes('429') || msg.toLowerCase().includes('rate')) {
+            analyzedKeysRef.current.delete(key);
+            await new Promise((r) => setTimeout(r, 30000));
+          }
+        } finally {
+          setAnalyzing((s) => ({ ...s, [cl.mobile]: false }));
+        }
+        // Throttle: ~1 req/sec to stay under free-tier limits
+        await new Promise((r) => setTimeout(r, 1200));
       }
-    });
-  }, [chatLeads]);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatLeads, skipAnalysis]);
 
   const reanalyze = () => {
     analyzedKeysRef.current.clear();
