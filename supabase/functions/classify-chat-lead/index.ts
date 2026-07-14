@@ -11,6 +11,52 @@ interface ChatMsg {
   message?: string;
 }
 
+function getLastPatientMessage(messages: ChatMsg[]): string {
+  const patientMsg = [...messages].reverse().find((m) =>
+    (m.sender || "").toLowerCase().includes("patient") && (m.message || "").trim()
+  );
+  return patientMsg?.message?.trim() || messages[messages.length - 1]?.message?.trim() || "";
+}
+
+function localClassification(messages: ChatMsg[]) {
+  const text = messages.map((m) => `${m.sender || ""} ${m.message || ""}`).join(" ").toLowerCase();
+  const lastPatientMessage = getLastPatientMessage(messages);
+  const hotPattern = /appointment|book|booking|visit|consult|doctor|urgent|emergency|severe|bahut|zyada|jaldi|turant|today|tomorrow|aaj|kal|pain|dard|admit|surgery|operation/;
+  const coldPattern = /not interested|galat|wrong number|stop|thanks|thank you|ok thanks|theek hai|nahi chahiye|no need/;
+  const warmPattern = /fees|charge|cost|price|medicine|report|symptom|problem|location|address|kab|kaise|query|puch|bata|batado|help/;
+
+  if (hotPattern.test(text)) {
+    return {
+      temperature: "hot",
+      summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : "Patient ne urgent consultation interest dikhaya.",
+      reason: "Chat me appointment/doctor consult ya urgent symptom ka signal mila.",
+      nextAction: "Patient ko turant call karke appointment confirm karein.",
+      source: "local",
+      aiUnavailable: true,
+    };
+  }
+
+  if (warmPattern.test(text) && !coldPattern.test(text)) {
+    return {
+      temperature: "warm",
+      summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : "Patient interested hai par decision pending hai.",
+      reason: "Patient ne information/query poochi hai, abhi urgent booking signal nahi mila.",
+      nextAction: "WhatsApp/call se details dekar follow-up schedule karein.",
+      source: "local",
+      aiUnavailable: true,
+    };
+  }
+
+  return {
+    temperature: "cold",
+    summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : "Chat me strong appointment interest nahi mila.",
+    reason: coldPattern.test(text) ? "Patient low-interest ya conversation close karta dikha." : "Urgent appointment ya strong interest ka signal nahi mila.",
+    nextAction: "Low priority follow-up list me rakhein.",
+    source: "local",
+    aiUnavailable: true,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -111,8 +157,14 @@ Sirf JSON return karein.`;
 
     if (!aiRes.ok) {
       const txt = await aiRes.text();
+      if (aiRes.status === 429 || aiRes.status === 402) {
+        return new Response(JSON.stringify(localClassification(messages)), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: `AI error ${aiRes.status}: ${txt}` }), {
-        status: aiRes.status === 429 || aiRes.status === 402 ? aiRes.status : 500,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
