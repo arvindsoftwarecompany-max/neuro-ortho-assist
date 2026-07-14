@@ -20,6 +20,7 @@ interface Classification {
   reason: string;
   nextAction: string;
   summary: string;
+  source?: 'ai' | 'local';
 }
 
 interface ChatLead {
@@ -70,6 +71,57 @@ function toLeadShape(cl: ChatLead, existing?: Lead): Lead {
   };
 }
 
+function getLastPatientMessage(messages: ChatMessage[]): string {
+  const patientMsg = [...messages].reverse().find((m) =>
+    (m.sender || '').toLowerCase().includes('patient') && (m.message || '').trim()
+  );
+  return patientMsg?.message?.trim() || messages[messages.length - 1]?.message?.trim() || '';
+}
+
+function classifyLeadLocally(cl: ChatLead): Classification {
+  const text = cl.messages.map((m) => `${m.sender || ''} ${m.message || ''}`).join(' ').toLowerCase();
+  const lastPatientMessage = getLastPatientMessage(cl.messages);
+  const hotPattern = /appointment|book|booking|visit|consult|doctor|urgent|emergency|severe|bahut|zyada|jaldi|turant|today|tomorrow|aaj|kal|pain|dard|admit|surgery|operation/;
+  const coldPattern = /not interested|galat|wrong number|stop|thanks|thank you|ok thanks|theek hai|nahi chahiye|no need/;
+  const warmPattern = /fees|charge|cost|price|medicine|report|symptom|problem|location|address|kab|kaise|query|puch|bata|batado|help/;
+
+  if (hotPattern.test(text)) {
+    return {
+      temperature: 'hot',
+      summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : 'Patient ne urgent consultation interest dikhaya.',
+      reason: 'Chat me appointment/doctor consult ya urgent symptom ka signal mila.',
+      nextAction: 'Patient ko turant call karke appointment confirm karein.',
+      source: 'local',
+    };
+  }
+
+  if (warmPattern.test(text) && !coldPattern.test(text)) {
+    return {
+      temperature: 'warm',
+      summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : 'Patient interested hai par decision pending hai.',
+      reason: 'Patient ne information/query poochi hai, abhi urgent booking signal nahi mila.',
+      nextAction: 'WhatsApp/call se details dekar follow-up schedule karein.',
+      source: 'local',
+    };
+  }
+
+  return {
+    temperature: 'cold',
+    summary: lastPatientMessage ? `Patient ne kaha: ${lastPatientMessage}` : 'Chat me strong appointment interest nahi mila.',
+    reason: coldPattern.test(text) ? 'Patient low-interest ya conversation close karta dikha.' : 'Urgent appointment ya strong interest ka signal nahi mila.',
+    nextAction: 'Low priority follow-up list me rakhein.',
+    source: 'local',
+  };
+}
+
+function isRateLimitMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('429') || lower.includes('rate_limited') || lower.includes('rate limited') || lower.includes('rate limit');
+}
+
+const AUTO_AI_LIMIT = 3;
+const AI_COOLDOWN_MS = 5 * 60 * 1000;
+
 const tempBadge: Record<Temperature, { label: string; icon: any; className: string }> = {
   hot:  { label: 'HOT',  icon: Flame,       className: 'bg-red-500/15 text-red-500 border-red-500/40' },
   warm: { label: 'WARM', icon: Thermometer, className: 'bg-orange-500/15 text-orange-500 border-orange-500/40' },
@@ -100,7 +152,9 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   const PAGE_SIZE = 50;
   const calledStorageKey = `lead-classification-called::${profile?.hospital_name || 'anon'}`;
   const analysisStorageKey = `lead-classification-analyses::${profile?.hospital_name || 'anon'}`;
+  const aiCooldownStorageKey = `${analysisStorageKey}::cooldown`;
   const [calledMap, setCalledMap] = useState<Record<string, boolean>>({});
+  const [aiCooldownUntil, setAiCooldownUntil] = useState(0);
 
   // Load calledMap whenever storage key becomes stable (profile loaded)
   useEffect(() => {
@@ -154,17 +208,44 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
     return list;
   }, [allChats]);
 
+  const localAnalyses = useMemo<Record<string, Classification>>(() => {
+    const next: Record<string, Classification> = {};
+    chatLeads.forEach((cl) => {
+      next[cl.mobile] = classifyLeadLocally(cl);
+    });
+    return next;
+  }, [chatLeads]);
+
+  const classifications = useMemo<Record<string, Classification>>(
+    () => ({ ...localAnalyses, ...analyses }),
+    [localAnalyses, analyses]
+  );
+
+  useEffect(() => {
+    try {
+      setAiCooldownUntil(Number(localStorage.getItem(aiCooldownStorageKey) || 0));
+    } catch {}
+  }, [aiCooldownStorageKey]);
+
   useEffect(() => {
     if (skipAnalysis) return;
+    const cooldownUntil = Number(localStorage.getItem(aiCooldownStorageKey) || 0);
+    if (cooldownUntil > Date.now()) {
+      setAiCooldownUntil(cooldownUntil);
+      return;
+    }
     const todayLeads = chatLeads.filter((cl) => isToday(cl.firstTimestamp) || isToday(cl.lastTimestamp));
     const last50 = chatLeads.slice(0, 50);
     const toAnalyzeMap = new Map<string, ChatLead>();
     todayLeads.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
     last50.forEach((cl) => toAnalyzeMap.set(cl.mobile, cl));
+    const toAnalyze = Array.from(toAnalyzeMap.values())
+      .filter((cl) => !analyses[cl.mobile])
+      .slice(0, AUTO_AI_LIMIT);
 
     let cancelled = false;
     (async () => {
-      for (const cl of toAnalyzeMap.values()) {
+      for (const cl of toAnalyze) {
         if (cancelled) return;
         const key = `${cl.mobile}::${cl.messages.length}`;
         if (analyzedKeysRef.current.has(key)) continue;
@@ -183,11 +264,12 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
           if (data?.error) throw new Error(data.error);
           setAnalyses((s) => ({ ...s, [cl.mobile]: data as Classification }));
         } catch (e: any) {
-          // On rate-limit, allow retry later & back off
           const msg = String(e?.message || '');
-          if (msg.includes('429') || msg.toLowerCase().includes('rate')) {
-            analyzedKeysRef.current.delete(key);
-            await new Promise((r) => setTimeout(r, 30000));
+          if (isRateLimitMessage(msg)) {
+            const nextCooldown = Date.now() + AI_COOLDOWN_MS;
+            try { localStorage.setItem(aiCooldownStorageKey, String(nextCooldown)); } catch {}
+            setAiCooldownUntil(nextCooldown);
+            return;
           }
         } finally {
           setAnalyzing((s) => ({ ...s, [cl.mobile]: false }));
@@ -198,7 +280,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatLeads, skipAnalysis]);
+  }, [chatLeads, skipAnalysis, aiCooldownStorageKey]);
 
   const reanalyze = () => {
     analyzedKeysRef.current.clear();
@@ -215,8 +297,8 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
     let list = chatLeads;
     if (onlyCalled) list = list.filter((cl) => !!calledMap[cl.mobile]);
     if (filter === 'all') return list;
-    return list.filter((cl) => analyses[cl.mobile]?.temperature === filter);
-  }, [chatLeads, analyses, filter, onlyCalled, calledMap]);
+    return list.filter((cl) => classifications[cl.mobile]?.temperature === filter);
+  }, [chatLeads, classifications, filter, onlyCalled, calledMap]);
 
   useEffect(() => { setPage(1); }, [filter, chatLeads.length]);
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
@@ -229,18 +311,18 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
   const counts = useMemo(() => {
     const c = { hot: 0, warm: 0, cold: 0, pending: 0 };
     chatLeads.forEach((cl) => {
-      const a = analyses[cl.mobile];
+      const a = classifications[cl.mobile];
       if (a) c[a.temperature]++;
       else c.pending++;
     });
     return c;
-  }, [chatLeads, analyses]);
+  }, [chatLeads, classifications]);
 
   const handleCall = (mobile: string) => window.open(`tel:${mobile.replace(/\D/g, '')}`, '_self');
   const handleWhatsApp = (cl: ChatLead) => {
     const phone = cl.mobile.replace(/\D/g, '');
     const wa = phone.startsWith('91') ? phone : `91${phone}`;
-    const a = analyses[cl.mobile];
+    const a = classifications[cl.mobile];
     const msg = `नमस्ते ${cl.patient_name} जी,\n\n${profile?.hospital_name || 'Hospital'} से बात कर रहे हैं।${a ? `\n\n${a.nextAction}` : ''}\n\nधन्यवाद! 🙏`;
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -291,7 +373,8 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
           {chatConfigured && !chatLoading && chatError && <span className="text-destructive">❌ {chatError}</span>}
           {chatConfigured && !chatLoading && !chatError && (
             <span className="text-primary">
-              💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(analyses).length} AI-classified (today + last 50)
+              💬 {allChats.length} messages • {chatLeads.length} unique patients • {Object.keys(classifications).length} classified
+              {aiCooldownUntil > Date.now() && ' • AI busy, local classification active'}
             </span>
           )}
         </div>
@@ -404,7 +487,7 @@ export default function LeadClassification({ defaultFilter, title, subtitle, ski
               </TableHeader>
               <TableBody>
                 {pagedLeads.map((cl) => {
-                  const a = analyses[cl.mobile];
+                  const a = classifications[cl.mobile];
                   const isAnalyzing = analyzing[cl.mobile];
                   const T = a ? tempBadge[a.temperature] : null;
                   const Icon = T?.icon;
