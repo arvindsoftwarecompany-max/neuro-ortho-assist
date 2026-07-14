@@ -21,6 +21,7 @@ interface Classification {
   nextAction: string;
   summary: string;
   source?: 'ai' | 'local';
+  aiUnavailable?: boolean;
 }
 
 interface ChatLead {
